@@ -1,0 +1,18 @@
+
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap');
+
+@theme {
+  --color-theme: #ffffff;          /* sidebar background */
+  --color-primary: #2853AF;
+  --color-primary-lite9: #e5f0fb;
+  --color-bg-grey: #333132;
+  --color-grey90: #434E58;
+   --color-grey100: #171725;
+}
+
+*{
+  font-family: "Jost", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+}
