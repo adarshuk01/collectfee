@@ -2,7 +2,6 @@ const Member = require("../models/Member");
 const Client = require("../models/User");
 const MemberSubscription = require("../models/memberSubscription")
 const SubscriptionPackage = require("../models/SubscriptionPackage");
-const memberSubscription = require("../models/memberSubscription");
 const MemberPayment = require("../models/MemberPayment");
 
 
