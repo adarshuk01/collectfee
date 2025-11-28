@@ -5,7 +5,18 @@ const connectDB = require("./config/db");
 require("./controllers/renewalCron");
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://feecollect.vercel.app"   // <-- replace with your real frontend URL
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  credentials: true
+}));
+
+app.options("*", cors());
+
 app.use(express.json());
 
 connectDB();
@@ -17,9 +28,6 @@ app.use("/api/members", require("./routes/memberRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/transaction", require("./routes/transactionRoutes"));
 
-
-
-
-app.listen(process.env.PORT, () =>
+app.listen(process.env.PORT || 5000, () =>
   console.log(`Server running on ${process.env.PORT}`)
 );

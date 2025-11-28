@@ -10,7 +10,6 @@ import ForgotPass from './pages/Authentication/ForgotPass'
 import Otp from './pages/Authentication/Otp'
 import AuthLayout from './pages/Authentication/AuthLayout'
 import Layout from './layout/Layout'
-import Home from './pages/Home'
 import SettingsPage from './pages/SettingsPage'
 import PersonalInfo from './components/settings/PersonalInfo'
 import Notification from './components/settings/Notification'
@@ -28,6 +27,7 @@ import MemberPayments from './components/member/MemberPayments'
 import QuickPay from './pages/QuickPay'
 import PaymentReceipt from './components/payments/PaymentReceipt'
 import MemberTransaction from './components/member/MemberTransaction'
+import Dashboard from './pages/Dashboard'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -44,7 +44,7 @@ function App() {
           <Route path='verify-otp' element={<Otp />} />
         </Route>
         <Route path='/' element={<Layout />}>
-          <Route path='' element={<Home />} />
+          <Route path='' element={<Dashboard />} />
           <Route path='booking' element={<>Booking</>} />
           <Route path='members' element={<Members />} />
           <Route path='settings' element={<SettingsPage />} />

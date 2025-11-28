@@ -11,6 +11,7 @@ const memberSchema = new mongoose.Schema({
     ref: "MemberSubscription",
     required: true
   },
+  status: { type: String, enum: ["active", "expired", "inactive", "due"], default: "active" },
   fullName: { type: String, required: true },
   contactNumber: { type: String, required: true },
   email: { type: String  },

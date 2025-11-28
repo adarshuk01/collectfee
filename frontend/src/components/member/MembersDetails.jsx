@@ -25,7 +25,7 @@ function MembersDetails() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
           <div>
             <h2 className="text-xl capitalize font-semibold text-gray-900">
-              {member?.fullName}
+              {member?.fullName||'loading'}
             </h2>
             <p className="text-sm text-gray-500">
               Member ID: {member?._id}
@@ -34,12 +34,12 @@ function MembersDetails() {
 
           <span
             className={`px-4 py-1 rounded-full text-sm font-medium ${
-              member?.subscription?.status === "active"
+              member?.status === "active"
                 ? "bg-green-100 text-green-700"
                 : "bg-red-100 text-red-700"
             }`}
           >
-            {member?.subscription?.status?.toUpperCase()}
+            {member?.status?.toUpperCase()}
           </span>
         </div>
 

@@ -91,7 +91,7 @@ function Members() {
         ) : (
          <div className="col-span-full flex flex-col justify-center items-center ">
             <img
-              src="public/nomem.png"
+              src="/nomem.png"
               alt="No Subscriptions"
               className=" opacity-50 mx-auto"
             />
