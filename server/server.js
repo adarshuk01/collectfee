@@ -10,7 +10,7 @@ app.use(cors({
   origin: [
     "http://localhost:5173",
     "https://feecollect.vercel.app",
-    "https://collectfee-k2l7.vercel.app/"   // <-- replace with your real frontend URL
+    "https://collectfee-k2l7.vercel.app"   // <-- replace with your real frontend URL
   ],
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   credentials: true
