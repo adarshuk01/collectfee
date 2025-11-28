@@ -5,7 +5,6 @@ import { useSubscription } from "../context/SubscriptionContext";
 import Button from "../components/common/Button";
 import { Pencil, Trash2 } from "lucide-react";
 import { FaRegEye } from "react-icons/fa";
-import { FiPhone, FiMail, FiMapPin, FiCalendar } from "react-icons/fi";
 
 function Members() {
   const navigate = useNavigate();
@@ -36,68 +35,72 @@ function Members() {
         />
       </div>
 
-      {/* List of members */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Members Table */}
+      <div className="overflow-x-auto  rounded-lg  ">
         {members?.length > 0 ? (
-          members.map((member) => (
-            <div
-              key={member._id}
-              className="bg-white p-4 rounded-lg shadow border border-gray-300 hover:shadow-md transition"
-            >
-              <h3 className="text-lg font-bold capitalize">{member.fullName}</h3>
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-gray-100 text-left border-b border-gray-300">
+                <th className="py-3 px-4">Name</th>
+              
+                              <th className="py-3 px-4">Email</th>
 
-              <div className="flex  flex-wrap gap-2 mt-2">
-                <div className="flex items-center gap-1 text-gray-600 text-sm">
-                  <FiPhone /> {member.contactNumber}
-                </div>
-                <div className="flex items-center gap-1 text-gray-600 text-sm">
-                  <FiMail />  {member.email}
-                </div>
-                <div className="flex items-center gap-1 text-gray-600 text-sm">
-                  <FiMapPin /> {member.address}
-                </div>
-                <div className="flex items-center gap-1 text-gray-600 text-sm">
-                  <FiCalendar /> {member.startDate?.split("T")[0]}
-                </div>
-                 </div>
-                <div className="text-gray-600 text-sm mt-2">
-                  Subscription: <span className="font-medium capitalize">{getSubscriptionName(member.subscriptionId)}</span>
-                </div>
-             
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-center">Actions</th>
+              </tr>
+            </thead>
 
-              {/* Actions */}
-              <div className="flex items-center gap-4 mt-4">
-                <button
-                  className="text-gray-600 flex items-center gap-1"
-                  onClick={() => navigate(`/member/${member._id}`)}
-                >
-                  <FaRegEye /> View
-                </button>
-                <button
-                  className="text-blue-600 flex items-center gap-1"
-                  onClick={() => navigate(`/member/edit/${member._id}`)}
-                >
-                  <Pencil size={16} /> Edit
-                </button>
-                <button
-                  className="text-red-600 flex items-center gap-1"
-                  onClick={() => deleteMember(member._id)}
-                >
-                  <Trash2 size={16} /> Delete
-                </button>
-              </div>
-            </div>
-          ))
+            <tbody className="bg-white">
+              {members.map((member) => (
+                <tr key={member._id} className="border-b border-gray-300 hover:bg-gray-50">
+                  <td className="py-3 px-4 font-semibold capitalize">
+                    {member.fullName}
+                  </td>
+                <td className="py-3 px-4 ">
+                    {member.email}
+                  </td>
+                  
+                  <td className="py-3 px-4 capitalize">
+                    {member.status}
+                  </td>
+
+                  <td className="py-3 px-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        className="text-gray-600 hover:text-gray-800 flex items-center gap-1"
+                        onClick={() => navigate(`/member/${member._id}`)}
+                      >
+                        <FaRegEye size={20} /> 
+                      </button>
+
+                      <button
+                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                        onClick={() => navigate(`/member/edit/${member._id}`)}
+                      >
+                        <Pencil size={20} /> 
+                      </button>
+
+                      <button
+                        className="text-red-600 hover:text-red-800 flex items-center gap-1"
+                        onClick={() => deleteMember(member._id)}
+                      >
+                        <Trash2 size={20} /> 
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         ) : (
-         <div className="col-span-full flex flex-col justify-center items-center ">
+          // No Members Section
+          <div className="flex flex-col justify-center items-center py-10">
             <img
               src="/nomem.png"
-              alt="No Subscriptions"
-              className=" opacity-50 mx-auto"
+              alt="No Members"
+              className=" opacity-60"
             />
-            <p className="text-gray-500 mt-3 text-center">
-              No member found
-            </p>
+            <p className="text-gray-500 mt-3 text-center">No member found</p>
           </div>
         )}
       </div>

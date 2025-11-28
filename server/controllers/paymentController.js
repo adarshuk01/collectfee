@@ -197,7 +197,7 @@ exports.quickPay = async (req, res) => {
     await payment.save();
 
     // 5️⃣ If fully paid, mark member as active
-    if (newStatus === "paid") {
+    if (newStatus === "paid"||"partial") {
       await Member.findByIdAndUpdate(payment.memberId, { status: "active" });
     }
 
