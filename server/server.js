@@ -28,6 +28,8 @@ app.use("/api/members", require("./routes/memberRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/transaction", require("./routes/transactionRoutes"));
 app.use("/api/stats", require("./routes/statsRoutes"));
+app.use("/api/settings", require("./routes/settingsRoutes"));
+
 
 
 app.listen(process.env.PORT || 5000, () =>

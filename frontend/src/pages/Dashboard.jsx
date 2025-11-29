@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { FaUsers, FaUserCheck, FaUserTimes, FaDollarSign, FaUser, FaUserClock } from "react-icons/fa";
+import {
+  FaUsers,
+  FaUserCheck,
+  FaUserTimes,
+  FaDollarSign,
+  FaUser,
+  FaUserClock,
+} from "react-icons/fa";
 import { IoArrowUp, IoArrowDown, IoCalendarOutline } from "react-icons/io5";
 import { FiPieChart, FiBarChart2 } from "react-icons/fi";
 import { Link } from "react-router-dom";
@@ -13,6 +20,9 @@ const DummyChart = ({ type }) => (
 );
 
 function Dashboard() {
+  // -------------------------------
+  // MAIN STATS FROM /stats/dashboard
+  // -------------------------------
   const [statsState, setStatsState] = useState({
     members: {
       total: 0,
@@ -22,11 +32,30 @@ function Dashboard() {
       due: 0,
     },
     payments: {
-      totalRevenue: 0,
+      totalRevenue: 0, // DO NOT CHANGE — stays from main API
       totalDue: 0,
     },
   });
 
+  // -------------------------------
+  // MONTHLY SUMMARY STATE
+  // -------------------------------
+  const [monthSummary, setMonthSummary] = useState({
+    collected: 0,
+    due: 0,
+  });
+
+  // current month yyyy-mm
+  const currentDate = new Date();
+  const defaultMonth = `${currentDate.getFullYear()}-${String(
+    currentDate.getMonth() + 1
+  ).padStart(2, "0")}`;
+
+  const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
+
+  // -------------------------------
+  // LOAD DASHBOARD STATS ONCE
+  // -------------------------------
   useEffect(() => {
     const loadStats = async () => {
       try {
@@ -39,6 +68,35 @@ function Dashboard() {
     loadStats();
   }, []);
 
+  // -------------------------------
+  // LOAD MONTHLY FEE SUMMARY
+  // -------------------------------
+  useEffect(() => {
+    const loadMonthlySummary = async () => {
+      try {
+        const [year, month] = selectedMonth.split("-");
+
+        const res = await axiosInstance.get(
+          `/stats/monthlypayment?month=${month}&year=${year}`
+        );
+
+        const summary = res.data.summary;
+
+        setMonthSummary({
+          collected: summary.totalCollected,
+          due: summary.totalDue,
+        });
+      } catch (err) {
+        console.log("Error loading monthly summary:", err);
+      }
+    };
+
+    loadMonthlySummary();
+  }, [selectedMonth]);
+
+  // -------------------------------
+  // DASHBOARD TOP CARDS (UNCHANGED)
+  // -------------------------------
   const stats = [
     {
       title: "Total Members",
@@ -69,7 +127,7 @@ function Dashboard() {
     },
     {
       title: "Total Revenue",
-      value: statsState.payments.totalRevenue,
+      value: `₹ ${statsState.payments.totalRevenue}`, // stays from FIRST API
       to: "/members",
       percent: "",
       isIncrease: true,
@@ -107,10 +165,11 @@ function Dashboard() {
 
         {percent && (
           <div
-            className={`flex items-center text-sm font-semibold p-1.5 rounded-full ${isIncrease
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-700"
-              }`}
+            className={`flex items-center text-sm font-semibold p-1.5 rounded-full ${
+              isIncrease
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
           >
             {isIncrease ? (
               <IoArrowUp size={12} className="mr-1" />
@@ -128,14 +187,15 @@ function Dashboard() {
 
   const SectionCard = ({ title, children, className = "" }) => (
     <div className={`bg-white p-6 shadow-xl rounded-xl ${className}`}>
-      <h3 className="text-xl font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">{title}</h3>
+      <h3 className="text-xl text-nowrap font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">
+        {title}
+      </h3>
       {children}
     </div>
   );
 
   return (
-    <div className="p- bg-gray-50 min-h-screen">
-
+    <div className="p- bg-gray-50 ">
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 mb-8">
         {stats.map((item, index) => (
           <StatCard key={index} {...item} />
@@ -143,42 +203,42 @@ function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ---------------- FEE OVERVIEW ---------------- */}
         <SectionCard title="Fee Overview" className="lg:col-span-2">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
-              <h3 className="text-sm text-gray-600 font-medium">Total Outstanding</h3>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                ₹ {statsState.payments.totalDue}
-              </p>
+          <div className="p-4 bg-blue-50 border-l-4 border-blue-500 mb-4 rounded-lg"> 
+            <h3 className="text-sm text-gray-600 font-medium">Total Outstanding</h3> 
+            <p className="text-2xl font-bold text-gray-900 mt-1"> ₹ {statsState.payments.totalDue} </p> 
             </div>
-          </div>
-
           <div className="flex items-center mb-4 space-x-3">
-            <IoCalendarOutline size={20} className="text-gray-500" />
             <input
               type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
               className="p-2 border border-gray-300 rounded-lg"
             />
             <span className="text-sm text-gray-600">for period/due date</span>
           </div>
 
-          <div className="grid lg:grid-cols-2 grid-cols-1 gap-4">
-            <div className="p-4 bg-green-50 border-l-4 border-green-500 rounded-lg">
-              <h3 className="text-sm text-gray-600 font-medium">Amount Collected</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Link to={'/reports/monthly'} className="p-4 bg-green-50 border-l-4 border-green-500 rounded-lg">
+              <h3 className="text-sm text-gray-600 text-nowrap font-medium">
+                Amount Collected
+              </h3>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                ₹ {statsState.payments.totalRevenue}
+                ₹ {monthSummary.collected}
               </p>
-            </div>
+            </Link>
 
-            <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+            <Link to={'/reports/monthly'} className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
               <h3 className="text-sm text-gray-600 font-medium">Amount Due</h3>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                ₹ {statsState.payments.totalDue}
+                ₹ {monthSummary.due}
               </p>
-            </div>
+            </Link>
           </div>
         </SectionCard>
 
+        {/* ---------------- ATTENDANCE ---------------- */}
         <SectionCard title="Attendance Today" className="lg:col-span-1 h-fit">
           <div className="flex items-center mb-4 space-x-3">
             <IoCalendarOutline size={20} className="text-gray-500" />

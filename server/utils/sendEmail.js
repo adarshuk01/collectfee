@@ -2,18 +2,28 @@ const nodemailer = require("nodemailer");
 require("dotenv").config();
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp-relay.brevo.com",
+  port: 587,
   auth: {
-    user: process.env.EMAIL,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_SMTP_KEY,
   },
 });
 
-module.exports = async (to, subject, text) => {
-  await transporter.sendMail({
-    from: process.env.EMAIL,
-    to,
-    subject,
-    text,
-  });
+module.exports = async (to, subject, html) => {
+  console.log(to,subject,html);
+  
+  try {
+    await transporter.sendMail({
+      from: 'rmycompany <adarshdhanwis@gmail.com>', // Recommended
+      to,
+      subject,
+      html,
+    });
+    console.log("Email sent successfully!");
+    return true;
+  } catch (error) {
+    console.error("Email Error:", error);
+    return false;
+  }
 };

@@ -39,6 +39,7 @@ fetchMembers()
   const fetchMemberById = async (id) => {
     try {
       setLoading(true);
+       setSingleMember(null);
       const res = await axiosInstance.get(`/members/${id}`);
       setSingleMember(res.data.member);
       console.log(res);

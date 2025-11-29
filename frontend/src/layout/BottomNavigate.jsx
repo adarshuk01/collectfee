@@ -9,6 +9,8 @@ import {
   IoChatbubbleEllipses,
   IoPersonOutline,
   IoPerson,
+  IoSettings,
+  IoSettingsOutline,
 } from "react-icons/io5";
 import { MdOutlineSubscriptions, MdSubscriptions } from "react-icons/md";
 import { HiOutlineDocumentReport, HiOutlineUserGroup, HiOutlineUsers, HiUserGroup, HiUsers } from "react-icons/hi";
@@ -25,7 +27,7 @@ function MobileBottomNav() {
     { name: "Reports", path: "/reports", icon: HiOutlineDocumentReport , filledIcon: BiSolidReport },
     { name: "Groups", path: "/groups", icon: HiOutlineUserGroup  , filledIcon: HiUserGroup },
 
-    { name: "Profile", path: "/settings", icon: IoPersonOutline, filledIcon: IoPerson },
+    { name: "Settings", path: "/settings", icon: IoSettingsOutline, filledIcon:IoSettings  },
   ];
 
   return (

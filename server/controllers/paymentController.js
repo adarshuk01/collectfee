@@ -444,11 +444,25 @@ exports.generatePremiumReceipt = async (req, res) => {
 
 
 const path = require("path");
+const fs = require("fs");
+const ReceiptSettings = require("../models/ReceiptSettings");
 
 
 exports.generateReceiptPDF = async (req, res) => {
   try {
     const { transactionId } = req.params;
+
+      // Fetch user receipt settings
+    const settings = await ReceiptSettings.findOne({clientId: req.user.id}) || {
+      businessName: "My Institute",
+      address: "Your Address",
+      phone: "",
+      email: "",
+      logoUrl: "",
+      themeColor: "#0B57D0",
+      textColor: "#000000",
+      footerMessage: "Thank you for your payment!"
+    };
 
     const tx = await MemberTransaction.findById(transactionId)
       .populate({
@@ -462,98 +476,150 @@ exports.generateReceiptPDF = async (req, res) => {
       return res.status(404).json({ success: false, message: "Receipt not found" });
     }
 
-    // --- CALCULATIONS ---
+    // === Calculations ===
     const feeTypes = tx.paymentId.feeType || [];
     const totalAmount = feeTypes.reduce((acc, f) => acc + f.value, 0);
     const paidNow = tx.paidAmount;
     const alreadyPaid = tx.paymentId.paidAmount - paidNow;
     const remainingAmount = totalAmount - (alreadyPaid + paidNow);
 
-    // --- PDF INIT ---
+    // === PDF SETUP ===
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=receipt_${transactionId}.pdf`);
 
     const doc = new PDFDocument({ margin: 40 });
     doc.pipe(res);
 
-    // --- REGISTER ROBOTO FONT ---
+    // === FONTS ===
     doc.registerFont("Roboto", path.join(__dirname, "../fonts/Roboto-Regular.ttf"));
     doc.registerFont("Roboto-Bold", path.join(__dirname, "../fonts/Roboto-Bold.ttf"));
 
-    // --- HEADER BAR ---
-    doc.rect(0, 0, doc.page.width, 60).fill("#0B57D0");
-    doc.fillColor("#fff").font("Roboto-Bold").fontSize(18).text("Payment Receipt", 40, 20);
-    doc.fillColor("#000").moveDown(2);
+   // === LOGO HANDLING (Cloudinary / URL support) ===
+if (settings.logoUrl) {
+  try {
+    const axios = require("axios");
 
-    // --- TITLE ---
-    doc.font("Roboto-Bold").fontSize(18).text("Student Payment Receipt", { align: "center" });
-    doc.moveDown(0.5);
+    const imgResponse = await axios.get(settings.logoUrl, {
+      responseType: "arraybuffer",
+    });
+
+    const imgBuffer = Buffer.from(imgResponse.data, "binary");
+
+    doc.image(imgBuffer, 40, 30, { width: 60 });
+
+  } catch (err) {
+    console.log("Logo load failed:", err.message);
+    // Fallback: continue PDF without crashing
+  }
+}
+
+    doc.font("Roboto-Bold").fontSize(20).fillColor("#0B57D0").text(`${settings?.businessName}`, 110, 35);
+    doc.font("Roboto").fontSize(10).fillColor("#000")
+      .text(`Address: ${settings.address}`, 110, 60)
+      .text(`Phone: ${settings.phone}`, 110, 75)
+      .text(`Email: ${settings.email}`, 110, 90);
+
+    // Header underline
+     doc.moveDown(1.5);
+    
+
+    // === RECEIPT TITLE ===
+    doc.font("Roboto-Bold").fontSize(18).fillColor("#0B57D0").text("PAYMENT RECEIPT", {
+      align: "center",
+    });
+
+    doc.fillColor("#000");
 
     doc.font("Roboto").fontSize(12)
       .text(`Receipt No: ${tx._id}`, { align: "center" })
       .text(`Date: ${new Date(tx.createdAt).toLocaleDateString()}`, { align: "center" });
+
     doc.moveDown(1.5);
 
-    // --- STUDENT INFO ---
-    doc.fontSize(12);
-    doc.font("Roboto-Bold").text(`Student Name: `, { continued: true }).font("Roboto").text(tx.memberId.fullName).moveDown(0.5);
-    doc.font("Roboto-Bold").text(`Student Email: `, { continued: true }).font("Roboto").text(tx.memberId.email).moveDown(0.5);
-    doc.font("Roboto-Bold").text(`Contact: `, { continued: true }).font("Roboto").text(tx.memberId.contactNumber).moveDown(0.5);
-    doc.font("Roboto-Bold").text(`Subscription: `, { continued: true }).font("Roboto").text(tx.paymentId.subscriptionId?.subscriptionName || "N/A").moveDown(1);
+    // === STUDENT DETAILS BOX ===
+    // doc.rect(40, doc.y, 510, 110).stroke("#ccc");
+    let yStart = doc.y + 10;
 
-    // --- TABLE HEADER ---
-    const tableTop = doc.y + 10;
+    doc.font("Roboto-Bold").fontSize(12).text("Student Information", 50, yStart);
+    yStart += 20;
+
+    doc.font("Roboto").fontSize(11);
+    doc.text(`Name: ${tx.memberId.fullName}`, 50, yStart); yStart += 18;
+    doc.text(`Email: ${tx.memberId.email}`, 50, yStart); yStart += 18;
+    doc.text(`Contact: ${tx.memberId.contactNumber}`, 50, yStart); yStart += 18;
+    doc.text(`Subscription: ${tx.paymentId.subscriptionId?.subscriptionName || "N/A"}`, 50, yStart);
+
+    doc.moveDown(4);
+
+    // === TABLE HEADER ===
+    const tableTop = doc.y;
     doc.font("Roboto-Bold").fontSize(12);
-    doc.text("Date", 40, tableTop);
-    doc.text("Description", 150, tableTop);
-    doc.text("Amount", 350, tableTop);
-    doc.text("Type", 450, tableTop);
-    doc.moveTo(40, tableTop + 15).lineTo(550, tableTop + 15).stroke('');
 
-    // --- TABLE ROWS ---
+    doc.rect(40, tableTop, 510, 25).fill("#0B57D0");
+    doc.fillColor("#fff")
+      .text("Date", 50, tableTop + 7)
+      .text("Description", 150, tableTop + 7)
+      .text("Amount", 350, tableTop + 7)
+      .text("Type", 450, tableTop + 7);
+
+    doc.fillColor("#000");
+
+    // === TABLE ROWS ===
     let y = tableTop + 30;
-    doc.font("Roboto");
+
     feeTypes.forEach((f) => {
-      doc.text(new Date(tx.createdAt).toLocaleDateString(), 40, y);
-      doc.text(f.label, 150, y);
-      doc.text(`₹${f.value}`, 350, y);
-      doc.text(f.isRecurring ? "Recurring" : "One-Time", 450, y);
-      y += 20;
+      doc.rect(40, y, 510, 25).stroke("#ddd");
+
+      doc.font("Roboto").fontSize(11)
+        .text(new Date(tx.createdAt).toLocaleDateString(), 50, y + 7)
+        .text(f.label, 150, y + 7)
+        .text(`₹${f.value}`, 350, y + 7)
+        .text(f.isRecurring ? "Recurring" : "One-Time", 450, y + 7);
+
+      y += 25;
     });
 
-    doc.moveTo(40, y + 5).lineTo(550, y + 5).stroke();
-    y += 25;
+    y += 10;
+    // FIX: Reset X so heading starts from the left
+            doc.x = 50;
 
-    // --- TOTALS SECTION ---
-    doc.font("Roboto-Bold");
-    doc.text("Total Amount:", 300, y);
-    doc.font("Roboto").text(`₹${totalAmount}`, 450, y);
-    y += 20;
+    // === TOTALS BOX ===
+    // doc.rect(300, y, 250, 100).stroke("#aaa");
 
-    doc.font("Roboto-Bold").text("Paid Previously:", 300, y);
-    doc.font("Roboto").text(`₹${alreadyPaid}`, 450, y);
-    y += 20;
+    let tY = y + 10;
 
-    doc.font("Roboto-Bold").text("Paid Now:", 300, y);
-    doc.font("Roboto").text(`₹${paidNow}`, 450, y);
-    y += 20;
+    doc.font("Roboto-Bold").text("Total Amount:", 310, tY);
+    doc.font("Roboto").text(`₹${totalAmount}`, 450, tY); tY += 20;
 
-    doc.font("Roboto-Bold").text("Remaining Amount:", 300, y);
-    doc.font("Roboto").text(`₹${remainingAmount < 0 ? 0 : remainingAmount}`, 450, y);
-    doc.moveDown(2);
+    doc.font("Roboto-Bold").text("Paid Previously:", 310, tY);
+    doc.font("Roboto").text(`₹${alreadyPaid}`, 450, tY); tY += 20;
 
-    // FIX: Reset X so heading starts from the left 
-    doc.x = 50;
+    doc.font("Roboto-Bold").text("Paid Now:", 310, tY);
+    doc.font("Roboto").text(`₹${paidNow}`, 450, tY); tY += 20;
 
-    // --- SUCCESS MESSAGE ---
-    doc.font("Roboto-Bold").fontSize(14).fillColor("green").text("PAYMENT SUCCESSFUL", { align: "center" });
-    doc.fillColor("#000").moveDown(2);
+    doc.font("Roboto-Bold").text("Remaining Amount:", 310, tY);
+    doc.font("Roboto").text(`₹${remainingAmount < 0 ? 0 : remainingAmount}`, 450, tY);
 
-    // --- FOOTER ---
-    doc.font("Roboto").fontSize(12)
-      .text("Thank you for your payment. If you have any questions, please contact us.", { align: "center" })
-      .moveDown(1)
-      .text("We appreciate your prompt payment and look forward to supporting your academic journey!", { align: "center" });
+    doc.moveDown(3);
+    // FIX: Reset X so heading starts from the left
+            doc.x = 50;
+
+    // === SUCCESS MESSAGE ===
+    doc.font("Roboto-Bold").fontSize(16).fillColor("green")
+      .text("PAYMENT SUCCESSFUL", { align: "center" });
+
+    doc.fillColor("#000").moveDown(0.5);
+
+    // === FOOTER ===
+    doc.font("Roboto").fontSize(11)
+      .text("Thank you for your payment!", { align: "center" })
+      .text("For any support, please contact support@collectfee.com", { align: "center" });
+
+    doc.moveDown(1);
+    doc.fontSize(10).text("This is a system-generated receipt and does not require a signature.", {
+      align: "center",
+      opacity: 0.6,
+    });
 
     doc.end();
 

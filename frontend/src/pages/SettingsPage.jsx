@@ -6,6 +6,7 @@ import {
   Globe,
   Info,
   Pencil,
+  ReceiptText,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -27,6 +28,8 @@ export default function SettingsPage() {
     { icon: <CreditCard size={22} />, label: "Your Card",to:'/settings/paymentmethod' },
     { icon: <ShieldCheck size={22} />, label: "Security",to:'/settings/security' },
     { icon: <Bell size={22} />, label: "Notification",to:'/settings/notification' },
+        { icon: <ReceiptText size={22} />, label: "Receipt Customization" ,to:'/settings/receipt'},
+
     { icon: <Globe size={22} />, label: "Languages",to:'/settings/language' },
     { icon: <Info size={22} />, label: "Help and Support" ,to:'/settings/help&support'},
     
@@ -37,7 +40,7 @@ export default function SettingsPage() {
       {/* Top */}
       <div>
         {/* Profile */}
-        <div className="flex items-center justify-between">
+        {/* <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img
               src={profile.img}
@@ -55,10 +58,10 @@ export default function SettingsPage() {
           <button onClick={()=>navigate('/settings/personalinfo')} className="p-2 rounded-full border border-gray-300">
             <Pencil size={20} className="text-black" />
           </button>
-        </div>
+        </div> */}
 
         {/* Heading */}
-        <h3 className="mt-10 mb-6 text-xl font-semibold text-gray-500">
+        <h3 className=" mb-6 text-xl font-semibold text-gray-500">
           Setting
         </h3>
 

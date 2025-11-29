@@ -5,6 +5,8 @@ import {
   IoHome,
   IoPersonOutline,
   IoPerson,
+  IoSettingsOutline,
+  IoSettings,
 } from "react-icons/io5";
 import { MdOutlineSubscriptions, MdSubscriptions, MdPayments } from "react-icons/md";
 import { HiOutlineDocumentReport, HiOutlineUserGroup, HiOutlineUsers, HiUserGroup, HiUsers } from "react-icons/hi";
@@ -18,7 +20,7 @@ function Sidebar() {
     { name: "Quick Pay", path: "/quickpay", icon: MdPayments, filledIcon: MdPayments },
         { name: "Groups", path: "/groups", icon: HiOutlineUserGroup, filledIcon: HiUserGroup },
   { name: "Reports", path: "/reports", icon: HiOutlineDocumentReport, filledIcon: BiSolidReport },
-    { name: "Profile", path: "/settings", icon: IoPersonOutline, filledIcon: IoPerson },
+    { name: "Settings", path: "/settings", icon: IoSettingsOutline, filledIcon: IoSettings },
     
 
   ];

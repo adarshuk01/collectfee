@@ -28,6 +28,8 @@ import QuickPay from './pages/QuickPay'
 import PaymentReceipt from './components/payments/PaymentReceipt'
 import MemberTransaction from './components/member/MemberTransaction'
 import Dashboard from './pages/Dashboard'
+import ReceiptSettings from './components/settings/ReceiptSettings'
+import MonthlyReport from './components/reports/MonthlyReport'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -52,6 +54,8 @@ function App() {
           <Route path='settings/notification' element={<Notification />} />
           <Route path='settings/security' element={<Security />} />
           <Route path='settings/language' element={<LanguageSelection />} />
+          <Route path="settings/receipt" element={<ReceiptSettings />} />
+
 
           <Route path='settings/help&support' element={<HelpSupport />} />
           <Route path='settings/paymentmethod' element={<PaymentMethod />} />
@@ -66,7 +70,8 @@ function App() {
           <Route path="/quickpay" element={<QuickPay />} />
           <Route path="/groups" element={<></>} />
           <Route path="/reports" element={<></>} />
-                    <Route path="/member/transactions/:memberId" element={<MemberTransaction/>} />
+           <Route path="/reports/monthly" element={<MonthlyReport/>} />
+          <Route path="/member/transactions/:memberId" element={<MemberTransaction/>} />
 
 
 
