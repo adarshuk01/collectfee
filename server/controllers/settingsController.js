@@ -6,7 +6,7 @@ exports.getReceiptSettings = async (req, res) => {
   try {
     const clientId = req.user.id;
 
-    let settings = await ReceiptSettings.findOne({ clientId });
+    let settings = await ReceiptSettings.findOne({ clientId:clientId });
 
     // Auto-create blank settings for new users
     if (!settings) {
@@ -32,13 +32,16 @@ exports.updateReceiptSettings = async (req, res) => {
       footerMessage,
     } = req.body;
 
+      const clientId = req.user.id;
+
+
     let logoUrl = null;
 
     if (req.file) {
       logoUrl = req.file.path; // Cloudinary URL
     }
 
-    let settings = await ReceiptSettings.findOne();
+    let settings = await ReceiptSettings.findOne({clientId:clientId});
 
     if (settings) {
       // Update

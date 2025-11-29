@@ -138,6 +138,8 @@ exports.getMembersMonthlyReport = async (req, res) => {
   try {
     const { month, year } = req.query;
     const clientId = req.user.id;
+    console.log(clientId);
+    
 
     if (!month || !year) {
       return res.status(400).json({
@@ -155,37 +157,41 @@ exports.getMembersMonthlyReport = async (req, res) => {
       dueDate: { $gte: startDate, $lte: endDate }
     }).populate("memberId", "fullName contactNumber email");
 
+    console.log(payments);
+    
+
     // Group by member
     const memberMap = {};
     console.log('memberMap',memberMap);
     
 
-    payments.forEach((pay) => {
-      const mId = pay.memberId._id;
+   payments.forEach((pay) => {
+  const mId = pay.memberId ? pay.memberId._id.toString() : "deleted";
 
-      if (!memberMap[mId]) {
-        memberMap[mId] = {
-          memberId: mId,
-          name: pay.memberId.fullName,
-          phone: pay.memberId.contactNumber,
-          email: pay.memberId.email,
-          totalDue: 0,
-          totalCollected: 0,
-          data: []   // each due entry for details if needed
-        };
-      }
+  if (!memberMap[mId]) {
+    memberMap[mId] = {
+      memberId: mId,
+      name: pay.memberId ? pay.memberId.fullName : "Deleted Member",
+      phone: pay.memberId ? pay.memberId.contactNumber : "-",
+      email: pay.memberId ? pay.memberId.email : "-",
+      totalDue: 0,
+      totalCollected: 0,
+      data: []
+    };
+  }
 
-      memberMap[mId].totalDue += pay.amount - pay.paidAmount;
-      memberMap[mId].totalCollected += pay.paidAmount;
+  memberMap[mId].totalDue += pay.amount - pay.paidAmount;
+  memberMap[mId].totalCollected += pay.paidAmount;
 
-      memberMap[mId].data.push({
-        paymentId: pay._id,
-        dueDate: pay.dueDate,
-        amount: pay.amount,
-        paidAmount: pay.paidAmount,
-        status: pay.status,
-      });
-    });
+  memberMap[mId].data.push({
+    paymentId: pay._id,
+    dueDate: pay.dueDate,
+    amount: pay.amount,
+    paidAmount: pay.paidAmount,
+    status: pay.status,
+  });
+});
+
 
     return res.json({
       success: true,
