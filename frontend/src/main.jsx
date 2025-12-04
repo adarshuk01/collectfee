@@ -7,19 +7,22 @@ import { AuthProvider } from './context/AuthContext.jsx'
 import { SubscriptionProvider } from './context/SubscriptionContext.jsx'
 import { MemberProvider } from './context/MemberContext.jsx'
 import { PaymentProvider } from './context/PaymentContext.jsx'
+import { BatchProvider } from './context/BatchContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-    <AuthProvider>
+      <AuthProvider>
         <SubscriptionProvider>
           <MemberProvider>
             <PaymentProvider>
-    <App />
-    </PaymentProvider>
-    </MemberProvider>
-    </SubscriptionProvider>
-    </AuthProvider>
+              <BatchProvider>
+                <App />
+              </BatchProvider>
+            </PaymentProvider>
+          </MemberProvider>
+        </SubscriptionProvider>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )

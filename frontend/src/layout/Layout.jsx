@@ -20,7 +20,8 @@ const hideBottomRoutes = [
   "settings/paymentmethod",
   "/member/edit",
   "/member/",
-  "/receipt/"
+  "/receipt/",
+  "/groups/"
 
 ];
 
@@ -45,7 +46,7 @@ const hidebottombar = hideBottomRoutes.some(route =>
           🔥 VERY IMPORTANT: Keep SAME width as before
           ensures table stays responsive like original layout
         */}
-        <div className="px-6 py-4 pb-40 lg:pb-20 lg:max-w-6xl mx-auto w-full">
+        <div className="px-6 py-4 pb-40 lg:pb-20 lg:max-w-7xl mx-auto w-full">
           <Outlet />
         </div>
 

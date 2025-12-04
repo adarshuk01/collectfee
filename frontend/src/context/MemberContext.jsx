@@ -113,6 +113,14 @@ fetchMembers()
     }
   };
 
+  const toggleActive = async (memberId) => {
+  const res = await axiosInstance.patch(`/members/${memberId}/toggle-active`);
+  console.log(res.data);
+
+  // Refresh UI after toggle
+  fetchMemberById(memberId);
+};
+
   return (
     <MemberContext.Provider
       value={{
@@ -125,6 +133,7 @@ fetchMembers()
         createMember,
         updateMember,
         deleteMember,
+        toggleActive
       }}
     >
       {children}

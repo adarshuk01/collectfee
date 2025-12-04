@@ -24,8 +24,9 @@ function Members() {
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between flex-wrap items-center mb-6">
         <h2 className="text-xl font-semibold">Members</h2>
+        <div className="flex  gap-2 items-center">
         <Button
           text="Add Member"
           className="w-fit"
@@ -33,6 +34,12 @@ function Members() {
           size="md"
           onClick={() => navigate(`/member/add`)}
         />
+        <Button
+          size="md"
+        variant="outline"
+        text={'Import from excel'}
+        />
+        </div>
       </div>
 
       {/* Members Table */}

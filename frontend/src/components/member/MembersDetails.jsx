@@ -3,6 +3,7 @@ import CommonHeader from "../common/CommonHeader";
 import { Link, useParams } from "react-router-dom";
 import { useMembers } from "../../context/MemberContext";
 import { Calendar, Clock, Phone, Mail, MapPin } from "lucide-react";
+import ToggleSwitch from "../common/ToggleSwitch";
 
 // 🔵 Pulse Skeleton Component
 function Pulse({ width = "w-24", height = "h-4" }) {
@@ -13,7 +14,7 @@ function Pulse({ width = "w-24", height = "h-4" }) {
 
 function MembersDetails() {
   const { id } = useParams();
-  const { singleMember, fetchMemberById, loading } = useMembers();
+  const { singleMember, fetchMemberById, loading, toggleActive } = useMembers();
 
   useEffect(() => {
     fetchMemberById(id);
@@ -28,7 +29,7 @@ function MembersDetails() {
       />
 
       <div className="mt-5">
-        
+
         {/* ================= TOP SECTION ================= */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
 
@@ -44,17 +45,22 @@ function MembersDetails() {
                 `Member ID: ${member?._id}`
               )}
             </p>
+
+            <ToggleSwitch
+              enabled={member?.isActive}
+              setEnabled={() => toggleActive(member?._id)}
+            />
+
           </div>
 
           {loading ? (
             <Pulse width="w-20" height="h-6" />
           ) : (
             <span
-              className={`px-4 py-1 rounded-full text-sm font-medium ${
-                member?.status === "active"
+              className={`px-4 py-1 rounded-full text-sm font-medium ${member?.status === "active"
                   ? "bg-green-100 text-green-700"
                   : "bg-red-100 text-red-700"
-              }`}
+                }`}
             >
               {member?.status?.toUpperCase()}
             </span>

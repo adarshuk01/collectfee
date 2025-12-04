@@ -3,7 +3,7 @@ import React from "react";
 const variants = {
   primary: "bg-primary hover:bg-blue-700 text-white",
   secondary: "bg-white text-black border border-gray-300 hover:bg-gray-100",
-  outline: "border border-white text-white hover:bg-white hover:text-black",
+  outline: "border border-primary text-primary ",
   danger: "bg-red-600 hover:bg-red-700 text-white",
 };
 

@@ -3,6 +3,9 @@ import axiosInstance from "../../api/axiosInstance";
 import { format } from "date-fns";
 import { useParams, useSearchParams } from "react-router-dom";
 import CommonHeader from "../common/CommonHeader";
+import Button from "../common/Button";
+import { BsWhatsapp } from "react-icons/bs";
+import { useMembers } from "../../context/MemberContext";
 
 function MemberPayments() {
   const [payments, setPayments] = useState([]);
@@ -17,6 +20,7 @@ function MemberPayments() {
   const [toDate, setToDate] = useState("");
   const [sortBy, setSortBy] = useState("dueDate");
   const [sortOrder, setSortOrder] = useState("asc");
+  
 
   
   const queryStatus = searchParams.get("status");
@@ -36,6 +40,8 @@ function MemberPayments() {
           sortOrder,
         },
       });
+      console.log('my response',res);
+      
 
       setPayments(res.data.payments || []);
     } catch (error) {
@@ -44,6 +50,8 @@ function MemberPayments() {
       setLoading(false);
     }
   };
+
+  
 
   useEffect(() => {
     // fetch only after query status is applied
@@ -141,42 +149,51 @@ function MemberPayments() {
                   <th className="p-3">Paid</th>
                   <th className="p-3">Remaining</th>
                   <th className="p-3">Status</th>
-                  <th className="p-3">Created</th>
+                  <th className="p-3"></th>
                 </tr>
               </thead>
 
               <tbody className="text-gray-700">
                 {payments.map((payment) => {
-                  const remaining = payment.amount - payment.paidAmount;
+  const remaining = payment.amount - payment.paidAmount;
 
-                  return (
-                    <tr key={payment._id} className="border-b border-gray-200 hover:bg-gray-50">
-                      <td className="p-3">
-                        {format(new Date(payment.dueDate), "dd MMM yyyy")}
-                      </td>
+  const phone = payment?.memberId?.contactNumber || "";
+  const message = `Hello! Your payment is pending. Remaining amount: ₹${remaining} Date:${format(new Date(payment.dueDate), " MMM yyyy")}.`;
+  const whatsappLink = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
-                      <td className="p-3">₹{payment.amount}</td>
+  return (
+    <tr key={payment._id} className="border-b border-gray-200 hover:bg-gray-50">
+      
+      <td className="p-3">
+        {format(new Date(payment.dueDate), "dd MMM yyyy")}
+      </td>
 
-                      <td className="p-3">₹{payment.paidAmount}</td>
+      <td className="p-3">₹{payment.amount}</td>
 
-                      <td className="p-3 font-medium">
-                        {payment.status === "partial"||"due" ? (
-                          <span className="text-red-600">
-                            ₹{remaining}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </td>
+      <td className="p-3">₹{payment.paidAmount}</td>
 
-                      <td className="p-3 capitalize">{payment.status}</td>
+      <td className="p-3 font-medium">
+        {payment.status === "partial" || payment.status === "due" ? (
+          <span className="text-red-600">₹{remaining}</span>
+        ) : (
+          <span className="text-gray-400">—</span>
+        )}
+      </td>
 
-                      <td className="p-3">
-                        {format(new Date(payment.createdAt), "dd MMM yyyy")}
-                      </td>
-                    </tr>
-                  );
-                })}
+      <td className="p-3 capitalize">{payment.status}</td>
+
+      <td className="p-3">
+        <Button
+          text={<BsWhatsapp />}
+          size="md"
+          onClick={() => window.open(whatsappLink, "_blank")}
+        />
+      </td>
+
+    </tr>
+  );
+})}
+
               </tbody>
             </table>
           )}

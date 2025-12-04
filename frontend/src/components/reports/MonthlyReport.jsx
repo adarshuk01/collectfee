@@ -146,7 +146,7 @@ function MonthlyReport() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <Link className="" to={`/member/${m.memberId}`}>
                       <div className="text-sm capitalize font-medium text-gray-900">{m.name || "—"}</div>
-                      <div className="text-xs text-gray-500">ID: {m.memberId}</div>
+                      <div className="text-xs text-gray-500"> Email ID: {m.email}</div>
                     </Link>
                     </td>
 

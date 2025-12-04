@@ -9,60 +9,61 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token"));
-  const [loading, setLoading] = useState(true);   
-  const [authLoading, setAuthLoading] = useState(false); 
-  const navigate=useNavigate()
+  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (token) validateToken();
     else setLoading(false);
   }, []);
 
-  // -------- Validate Token (on refresh) ---------
+  // ---------------- VALIDATE TOKEN -----------------
   const validateToken = async () => {
+    const toastId = toast.loading("Validating session...");
     try {
       const res = await axiosInstance.get("/auth/me");
       setUser(res.data.user);
-      console.log(res);
-      
+      toast.success("Session restored!", { id: toastId });
     } catch (error) {
       localStorage.removeItem("token");
-      console.log(error);
-      
       setUser(null);
+      toast.error("Session expired. Please login again.", { id: toastId });
     }
     setLoading(false);
   };
 
- 
-
   // ---------------- SIGNUP -----------------------
   const signup = async (data) => {
+    const toastId = toast.loading("Creating account...");
     setAuthLoading(true);
+
     try {
       const res = await axiosInstance.post("/auth/register", data);
-      toast.success("OTP sent to your email");
+      toast.success("OTP sent to your email!", { id: toastId });
       return res.data;
     } catch (error) {
-      toast.error(error?.response?.data?.msg || "Signup failed. Try again!");
+      toast.error(error?.response?.data?.msg || "Signup failed!", { id: toastId });
       throw error;
     } finally {
       setAuthLoading(false);
     }
   };
 
-  // ----------- VERIFY SIGNUP OTP ----------------
+  // ---------------- VERIFY SIGNUP OTP ------------
   const verifySignupOtp = async (otp, tempToken) => {
+    const toastId = toast.loading("Verifying OTP...");
     setAuthLoading(true);
+
     try {
       const res = await axiosInstance.post(
         `/auth/register/verify?token=${tempToken}`,
         { otp }
       );
-      toast.success("Signup Verified Successfully!");
+      toast.success("Signup Verified!", { id: toastId });
       return res.data;
     } catch (error) {
-      toast.error(error?.response?.data?.msg || "Invalid OTP");
+      toast.error(error?.response?.data?.msg || "Invalid OTP", { id: toastId });
       throw error;
     } finally {
       setAuthLoading(false);
@@ -71,15 +72,16 @@ export const AuthProvider = ({ children }) => {
 
   // ---------------- LOGIN ------------------------
   const login = async (data) => {
+    const toastId = toast.loading("Logging in...");
     setAuthLoading(true);
+
     try {
       const res = await axiosInstance.post("/auth/login", data);
-      console.log(res);
-      
+
       if (res.data.requires2FA) {
-        toast("OTP sent for login verification", { icon: "📩" });
+        toast.success("OTP sent for verification!", { id: toastId });
       } else {
-        toast.success("Login successful!");
+        toast.success("Login successful!", { id: toastId });
         localStorage.setItem("token", res.data.token);
         setToken(res.data.token);
         validateToken();
@@ -87,7 +89,8 @@ export const AuthProvider = ({ children }) => {
       return res.data;
     } catch (error) {
       toast.error(
-        error?.response?.data?.msg || "Login failed. Check your credentials."
+        error?.response?.data?.msg || "Invalid login credentials",
+        { id: toastId }
       );
       throw error;
     } finally {
@@ -95,16 +98,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ----------- VERIFY LOGIN OTP (2FA) ------------
+  // ---------------- VERIFY LOGIN OTP -------------
   const verifyLoginOtp = async ({ email, otp }) => {
+    const toastId = toast.loading("Verifying OTP...");
     setAuthLoading(true);
+
     try {
       const res = await axiosInstance.post("/auth/login/verify", {
         email,
         otp,
       });
 
-      toast.success("Login verified!");
+      toast.success("Login verified!", { id: toastId });
 
       localStorage.setItem("token", res.data.token);
       setToken(res.data.token);
@@ -112,43 +117,40 @@ export const AuthProvider = ({ children }) => {
 
       return res.data;
     } catch (error) {
-      toast.error(error?.response?.data?.msg || "Invalid OTP");
+      toast.error(error?.response?.data?.msg || "Invalid OTP", { id: toastId });
       throw error;
     } finally {
       setAuthLoading(false);
     }
   };
 
+  // ---------------- TOGGLE 2FA -------------------
+  const toggle2FA = async () => {
+    const toastId = toast.loading("Updating 2FA...");
+    try {
+      const res = await axiosInstance.put("/auth/2fa/toggle");
 
-const toggle2FA = async () => {
-  const loadingToast = toast.loading("Updating 2FA...");
+      toast.success(res.data.msg, { id: toastId });
 
-  try {
-    const res = await axiosInstance.put("/auth/2fa/toggle");
+      setUser((prev) => ({
+        ...prev,
+        is2FA: res.data.is2FA,
+      }));
 
-    toast.dismiss(loadingToast);
-    toast.success(res.data.msg);
-
-    // Update user state locally
-    setUser((prev) => ({
-      ...prev,
-      is2FA: res.data.is2FA,
-    }));
-
-    return res.data;
-  } catch (error) {
-    toast.dismiss(loadingToast);
-    toast.error(error?.response?.data?.msg || "Failed to update 2FA status");
-  }
-};
-
+      return res.data;
+    } catch (error) {
+      toast.error(error?.response?.data?.msg || "Failed to update 2FA", {
+        id: toastId,
+      });
+    }
+  };
 
   // ---------------- LOGOUT -----------------------
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
     toast.success("Logged out");
-   navigate("/auth/signin");
+    navigate("/auth/signin");
   };
 
   return (
@@ -156,8 +158,8 @@ const toggle2FA = async () => {
       value={{
         user,
         token,
-        loading,       // initial app loading
-        authLoading,   // button-level loading
+        loading,
+        authLoading,
         signup,
         verifySignupOtp,
         login,
@@ -171,4 +173,3 @@ const toggle2FA = async () => {
     </AuthContext.Provider>
   );
 };
-

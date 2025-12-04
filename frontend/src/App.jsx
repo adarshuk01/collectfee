@@ -30,6 +30,9 @@ import MemberTransaction from './components/member/MemberTransaction'
 import Dashboard from './pages/Dashboard'
 import ReceiptSettings from './components/settings/ReceiptSettings'
 import MonthlyReport from './components/reports/MonthlyReport'
+import Groups from './pages/Groups'
+import GroupForm from './components/group/GroupForm'
+import GroupDetails from './components/group/GroupDetails'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -68,7 +71,9 @@ function App() {
           <Route path="/member/payments/:memberId" element={<MemberPayments />} />
 
           <Route path="/quickpay" element={<QuickPay />} />
-          <Route path="/groups" element={<></>} />
+          <Route path="/groups" element={<Groups/>} />
+          <Route path="/groups/add" element={<GroupForm/>} />
+           <Route path="/groups/:id" element={<GroupDetails/>} />
           <Route path="/reports" element={<></>} />
            <Route path="/reports/monthly" element={<MonthlyReport/>} />
           <Route path="/member/transactions/:memberId" element={<MemberTransaction/>} />
