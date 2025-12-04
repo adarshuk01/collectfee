@@ -69,6 +69,7 @@ if (status) {
         // Fetch Data
         // =========================
         const payments = await MemberPayment.find(filters)
+        .populate("memberId")
             .sort(sortQuery)
             .skip(skip)
             .limit(Number(limit));
@@ -112,7 +113,7 @@ exports.getMemberPendingPayments = async (req, res) => {
             .populate({
                 path: "subscriptionId",
                 select: "subscriptionName admissionFee billingCycle recurringAmount customFields"
-            })
+            }).populate("memberId")
             .sort({ dueDate: 1 });
 
         if (!payments.length) {

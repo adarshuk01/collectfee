@@ -5,7 +5,8 @@ const {
   getMembersByClient,
   getMember,
   updateMember,
-  deleteMember
+  deleteMember,
+  toggleMemberActive
 } = require("../controllers/memberController");
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -23,5 +24,7 @@ router.put("/:id",authMiddleware, updateMember);
 
 // ➤ Delete Member
 router.delete("/:id", deleteMember);
+
+router.patch("/:memberId/toggle-active", authMiddleware, toggleMemberActive);
 
 module.exports = router;

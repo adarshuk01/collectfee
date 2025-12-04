@@ -473,3 +473,30 @@ exports.getMemberSubscriptionStatus = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+exports.toggleMemberActive = async (req, res) => {
+  try {
+    const { memberId } = req.params;
+    const clientId = req.user.id;
+
+    // Find member
+    const member = await Member.findOne({ _id: memberId, clientId });
+
+    if (!member) {
+      return res.status(404).json({ message: "Member not found or unauthorized" });
+    }
+
+    // Toggle the boolean
+    member.isActive = !member.isActive;
+    await member.save();
+
+    return res.status(200).json({
+      message: `Member is now ${member.isActive ? "Active" : "Inactive"}`,
+      isActive: member.isActive
+    });
+
+  } catch (error) {
+    console.error("Error toggling member:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

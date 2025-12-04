@@ -15,20 +15,24 @@ function addCycle(date, cycle) {
   return newDate;
 }
 
-cron.schedule("06 13 * * *", async () => {
+cron.schedule("00 11 * * *", async () => {
   console.log("🔄 Running daily subscription renewal check...");
 
   const today = new Date();
 
   try {
-    // Find subscriptions that need renewal
     const expiringSubs = await MemberSubscription.find({
       status: "active",
       nextRenewalDate: { $lte: today }
-    }).populate("subscriptionId");
+    })
+      .populate("subscriptionId")
+      .populate("memberId"); // 👈 needed to check isActive
 
     for (const sub of expiringSubs) {
-      console.log(`📌 Processing renewal for member: ${sub.memberId}`);
+
+   
+
+      console.log(`📌 Processing renewal for member: ${sub.memberId._id}`);
 
       const pkg = sub.subscriptionId;
 
@@ -36,10 +40,9 @@ cron.schedule("06 13 * * *", async () => {
       sub.status = "expired";
       await sub.save();
 
-      // ---- 1️⃣.1 MARK MEMBER AS EXPIRED ----
       await Member.findByIdAndUpdate(sub.memberId, { status: "expired" });
 
-      // ---- 2️⃣ CREATE NEW ACTIVE SUBSCRIPTION CYCLE ----
+      // ---- 2️⃣ CREATE NEW ACTIVE SUBSCRIPTION ----
       const newStartDate = sub.nextRenewalDate;
       const newRenewalDate = addCycle(newStartDate, pkg.billingCycle);
 
@@ -52,7 +55,7 @@ cron.schedule("06 13 * * *", async () => {
         status: "active"
       });
 
-      // ---- 3️⃣ BUILD RECURRING FEE LIST ----
+      // ---- 3️⃣ BUILD RECURRING FEES ----
       const recurringFees = pkg.customFields
         .filter(f => f.isRecurring === true)
         .map(f => ({
@@ -61,9 +64,15 @@ cron.schedule("06 13 * * *", async () => {
           isRecurring: true
         }));
 
+           // ⛔ Do NOT renew if member is inactive
+      if (!sub.memberId?.isActive) {
+        console.log(`⛔ Skipped renewal — Member inactive: ${sub.memberId._id}`);
+        continue;
+      }
+
       const nextBillAmount = recurringFees.reduce((acc, cur) => acc + cur.value, 0);
 
-      // ---- 4️⃣ CREATE DUE BILL FOR NEW CYCLE ----
+      // ---- 4️⃣ CREATE NEW BILL ----
       await MemberPayment.create({
         memberId: sub.memberId,
         clientId: sub.clientId,
@@ -76,10 +85,7 @@ cron.schedule("06 13 * * *", async () => {
         paidAmount: 0
       });
 
-      // // ---- 5️⃣ MARK MEMBER AS ACTIVE AGAIN ----
-      // await Member.findByIdAndUpdate(sub.memberId, { status: "active" });
-
-      console.log(`✨ Renewal created for member ${sub.memberId}`);
+      console.log(`✨ Renewal created for member ${sub.memberId._id}`);
     }
 
     console.log("🎉 Renewal Check Completed");
@@ -87,3 +93,4 @@ cron.schedule("06 13 * * *", async () => {
     console.error("❌ CRON ERROR:", error);
   }
 });
+
