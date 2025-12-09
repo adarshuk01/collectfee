@@ -33,6 +33,7 @@ import MonthlyReport from './components/reports/MonthlyReport'
 import Groups from './pages/Groups'
 import GroupForm from './components/group/GroupForm'
 import GroupDetails from './components/group/GroupDetails'
+import MembersImport from './components/member/MembersImport'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -68,6 +69,8 @@ function App() {
           <Route path="member/add" element={<MemberForm />} />
           <Route path="/member/edit/:id" element={<MemberForm />} />
           <Route path="/member/:id" element={<MembersDetails />} />
+          <Route path="/member/excelImport" element={<MembersImport />} />
+
           <Route path="/member/payments/:memberId" element={<MemberPayments />} />
 
           <Route path="/quickpay" element={<QuickPay />} />

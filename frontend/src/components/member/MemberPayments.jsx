@@ -74,7 +74,7 @@ function MemberPayments() {
             onChange={(e) => setStatus(e.target.value)}
           >
             <option value="">All</option>
-            <option value="due">Due</option>
+            <option value="totaldue">Due</option>
             <option value="paid">Paid</option>
             <option value="partial">Partial</option>
           </select>

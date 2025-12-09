@@ -35,6 +35,7 @@ fetchBatches()
             className="shadow-md p-4 rounded-lg hover:shadow-lg transition border border-gray-300"
           >
             <h3 className="text-lg capitalize">{batch.name}</h3>
+            <hr className="my-2 border border-gray-200" />
 
             {/* If your API includes memberCount */}
             <p className="text-sm text-primary underline underline-offset-2">

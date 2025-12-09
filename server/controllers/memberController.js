@@ -158,47 +158,184 @@ exports.createMember = async (req, res) => {
 
 
 
+exports.assignSubscriptionToMembers = async (req, res) => {
+  try {
+    const { memberIds, subscriptionId } = req.body;
+    const clientId = req.user.id;
 
-
-
-// ➤ Get all members under a client with subscription details
-exports.getMembersByClient = async (req, res) => {
-    try {
-        const members = await Member.find({ clientId: req.user.id });
-        console.log(members);
-
-        const response = await Promise.all(
-            members.map(async (member) => {
-                // Find the active subscription for each member
-                const subscription = await MemberSubscription.findOne({ memberId: member._id, status: 'active' });
-                console.log(subscription);
-
-
-                let remainingDays = null;
-
-                if (subscription?.nextRenewalDate) {
-                    const now = new Date();
-                    const expiry = new Date(subscription.nextRenewalDate);
-
-                    remainingDays = Math.max(
-                        0,
-                        Math.ceil((expiry - now) / (1000 * 60 * 60 * 24))
-                    );
-                }
-
-                return {
-                    ...member.toObject(),
-                    subscription: subscription || null,
-                    remainingDays,
-                };
-            })
-        );
-
-        res.json(response);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    if (!memberIds?.length || !subscriptionId) {
+      return res.status(400).json({
+        success: false,
+        message: "memberIds and subscriptionId are required"
+      });
     }
+
+    const subscription = await SubscriptionPackage.findById(subscriptionId);
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        message: "Subscription not found"
+      });
+    }
+
+    const members = await Member.find({
+      _id: { $in: memberIds },
+      clientId
+    });
+
+    if (!members.length) {
+      return res.status(400).json({
+        success: false,
+        message: "No members found"
+      });
+    }
+
+    const memberSubscriptions = [];
+    const memberPayments = [];
+
+    for (const member of members) {
+      // ✅ Skip if already has subscription
+      if (member.subscriptionId) continue;
+
+      // ---------- Calculate Renewal ----------
+      const nextRenewalDate = calculateNextRenewal(
+        member.startDate,
+        subscription.billingCycle
+      );
+
+      // ---------- Create MemberSubscription ----------
+      const memberSub = {
+        memberId: member._id,
+        clientId,
+        subscriptionId,
+        startDate: member.startDate,
+        nextRenewalDate,
+        status: "active"
+      };
+      memberSubscriptions.push(memberSub);
+
+      // ---------- Build Fee Types ----------
+      const feeTypeList = [];
+
+      feeTypeList.push({
+        label: "Admission Fee",
+        value: subscription.admissionFee,
+        isRecurring: false
+      });
+
+      subscription.customFields.forEach(field => {
+        feeTypeList.push({
+          label: field.label,
+          value: field.value,
+          isRecurring: field.isRecurring
+        });
+      });
+
+      const amount = feeTypeList.reduce((a, b) => a + b.value, 0);
+
+      memberPayments.push({
+        memberId: member._id,
+        clientId,
+        subscriptionId,
+        amount,
+        feeType: feeTypeList,
+        dueDate: member.startDate,
+        status: "due",
+        paidAmount: 0,
+        // memberSubscriptionId added later
+      });
+
+      // ---------- Update member ----------
+      member.subscriptionId = subscriptionId;
+      await member.save();
+    }
+
+    // ✅ Bulk insert subscriptions
+    const createdSubscriptions = await MemberSubscription.insertMany(
+      memberSubscriptions
+    );
+
+    // ✅ Attach subscriptionId to payments
+    createdSubscriptions.forEach((sub, index) => {
+      memberPayments[index].memberSubscriptionId = sub._id;
+    });
+
+    // ✅ Bulk insert payments
+    await MemberPayment.insertMany(memberPayments);
+
+    res.json({
+      success: true,
+      assignedCount: createdSubscriptions.length,
+      message: "Subscription assigned successfully"
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
 };
+
+
+
+
+// ➤ Get all members under a client with subscription + due amounts
+exports.getMembersByClient = async (req, res) => {
+  try {
+    const members = await Member.find({ clientId: req.user.id });
+
+    const response = await Promise.all(
+      members.map(async (member) => {
+        
+        // 1️⃣ Get active subscription
+        const subscription = await MemberSubscription.findOne({
+          memberId: member._id,
+          status: "active",
+        }).populate("subscriptionId");
+
+        // 2️⃣ Calculate remaining days
+        let remainingDays = null;
+
+        if (subscription?.nextRenewalDate) {
+          const now = new Date();
+          const expiry = new Date(subscription.nextRenewalDate);
+
+          remainingDays = Math.max(
+            0,
+            Math.ceil((expiry - now) / (1000 * 60 * 60 * 24))
+          );
+        }
+
+        // 3️⃣ Get all due payments for this member
+        const payments = await MemberPayment.find({
+          memberId: member._id,
+          status: { $in: ["due", "partial"] } // only unpaid
+        });
+
+        // 4️⃣ Calculate total due amount
+        let dueAmount = 0;
+
+        payments.forEach((p) => {
+          dueAmount += p.amount - p.paidAmount;
+        });
+
+        return {
+          ...member.toObject(),
+          subscription: subscription || null,
+          remainingDays,
+          dueAmount,   // ✅ added here
+        };
+      })
+    );
+
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 
 // ➤ Get single member with subscription, remaining days & total due

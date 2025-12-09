@@ -4,24 +4,24 @@ const mongoose = require("mongoose");
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const clientId = req.user.id; // or however you store logged-in user
+    const clientId = req.user.id;
 
     // 1️⃣ MEMBER STATS
     const memberStats = await Member.aggregate([
-      { $match: { clientId:new mongoose.Types.ObjectId(clientId) } },
+      { $match: { clientId: new mongoose.Types.ObjectId(clientId) } },
       {
         $group: {
-          _id: "$status",
-          count: { $sum: 1 }
+          _id: null,
+          total: { $sum: 1 },
+          active: { $sum: { $cond: [{ $eq: ["$isActive", true] }, 1, 0] } },
+          inactive: { $sum: { $cond: [{ $eq: ["$isActive", false] }, 1, 0] } },
+          expired: { $sum: { $cond: [{ $eq: ["$status", "expired"] }, 1, 0] } },
+          due: { $sum: { $cond: [{ $eq: ["$status", "due"] }, 1, 0] } }
         }
       }
     ]);
 
-    console.log('memberStats',memberStats);
-    
-
-    // Convert to object format
-    let members = {
+    let members = memberStats[0] || {
       total: 0,
       active: 0,
       inactive: 0,
@@ -29,14 +29,9 @@ exports.getDashboardStats = async (req, res) => {
       due: 0
     };
 
-    memberStats.forEach(stat => {
-      members[stat._id] = stat.count;
-      members.total += stat.count;
-    });
-
-    // 2️⃣ PAYMENT STATS
+    // 2️⃣ PAYMENT STATS REMAINS SAME
     const paymentStats = await MemberPayment.aggregate([
-      { $match: { clientId:new mongoose.Types.ObjectId(clientId) } },
+      { $match: { clientId: new mongoose.Types.ObjectId(clientId) } },
       {
         $group: {
           _id: null,
@@ -67,6 +62,7 @@ exports.getDashboardStats = async (req, res) => {
     });
   }
 };
+
 
 // /api/payments/report?month=8&year=2025
 exports.getMonthlyPaymentSummary = async (req, res) => {

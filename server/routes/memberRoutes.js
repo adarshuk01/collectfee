@@ -6,7 +6,8 @@ const {
   getMember,
   updateMember,
   deleteMember,
-  toggleMemberActive
+  toggleMemberActive,
+  assignSubscriptionToMembers
 } = require("../controllers/memberController");
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -24,6 +25,8 @@ router.put("/:id",authMiddleware, updateMember);
 
 // ➤ Delete Member
 router.delete("/:id", deleteMember);
+
+router.post('/assign-subscription',authMiddleware , assignSubscriptionToMembers)
 
 router.patch("/:memberId/toggle-active", authMiddleware, toggleMemberActive);
 

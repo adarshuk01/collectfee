@@ -9,7 +9,7 @@ const memberSchema = new mongoose.Schema({
   subscriptionId:{
     type: mongoose.Schema.Types.ObjectId,
     ref: "MemberSubscription",
-    required: true
+    default: null
   },
   batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null },
 

@@ -86,12 +86,10 @@ function MonthlyReport() {
   return (
     <div className=" bg-gray-50 min-h-[60vh]">
       <div className="flex items-center  flex-wrap justify-between mb-4">
-        <h2 className="text-2xl font-semibold">Monthly Members Report</h2>
+        <h2 className="text-2xl font-semibold mb-4">Monthly Members Report</h2>
 
         <div className="flex items-center space-x-3">
           <div className="flex items-center text-gray-600">
-            <IoCalendarOutline size={18} className="mr-2" />
-            <span className="text-sm mr-2">Select month</span>
           </div>
 
           <input
