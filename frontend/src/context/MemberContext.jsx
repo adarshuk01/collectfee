@@ -14,13 +14,13 @@ export const MemberProvider = ({ children }) => {
   // GET MEMBERS BY CLIENT
   // ------------------------------------
   const fetchMembers = async () => {
-        const toastId = toast.loading("Loading Members...");
+    
     
     try {
       setLoading(true);
       const res = await axiosInstance.get(`/members/client`);
       console.log(res);
-      toast.success("Member loaded", { id: toastId });
+      toast.success("Member loaded");
       
       setMembers(res.data);
     } catch (err) {
