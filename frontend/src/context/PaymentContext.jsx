@@ -7,40 +7,53 @@ export const PaymentContext = createContext();
 
 export const PaymentProvider = ({ children }) => {
   const [payments, setPayments] = useState([]);
-  const navigate=useNavigate()
+  const navigate = useNavigate();
 
-  // 🔹 Fetch pending payments based on memberId
+  // 🔹 Fetch pending / partial payments for member
   const fetchPendingPayments = async (memberId) => {
     try {
       const res = await axiosInstance.get(`/payments/pending/${memberId}`);
-      setPayments(res.data.pendingPayments);
-      console.log(res);
-      
+      setPayments(res.data.pendingPayments || []);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch payments error:", err);
     }
   };
 
-  // 🔹 Quick Pay method moved to context
-  const quickPay = async (paymentId, amountPaid, mode) => {
+  // 🔹 Quick Pay (fee-wise)
+  const quickPay = async (paymentId, paymentsPayload, mode) => {
     try {
       const res = await axiosInstance.patch(
         `/payments/quick-pay/${paymentId}`,
-        { amountPaid, mode }
+        {
+          payments: paymentsPayload,
+          mode
+        }
       );
 
-      console.log(res);
-      navigate(`/receipt/${res.data.transaction._id}`)
-      
+      const { payment, transaction } = res.data;
 
-      // Remove updated payment from list
-      setPayments((prev) => prev.filter((p) => p._id !== paymentId));
+      // 🔥 Update payment in list instead of removing blindly
+      setPayments((prev) =>
+        prev
+          .map((p) => (p._id === payment._id ? payment : p))
+          .filter((p) => p.status !== "paid") // remove only if fully paid
+      );
 
-      return { success: true };
+      // 🔁 Navigate to receipt
+      if (transaction?._id) {
+        navigate(`/receipt/${transaction._id}`);
+      }
+
+      return {
+        success: true,
+        payment,
+        transaction
+      };
     } catch (err) {
+      console.error("Quick pay error:", err);
       return {
         success: false,
-        message: err?.response?.data?.message || "Payment failed",
+        message: err?.response?.data?.message || "Payment failed"
       };
     }
   };

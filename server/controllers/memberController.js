@@ -3,7 +3,7 @@ const Client = require("../models/User");
 const MemberSubscription = require("../models/memberSubscription")
 const SubscriptionPackage = require("../models/SubscriptionPackage");
 const MemberPayment = require("../models/MemberPayment");
-
+const mongoose = require("mongoose");
 
 function calculateNextRenewal(startDate, billingCycle) {
     const date = new Date(startDate);
@@ -107,39 +107,59 @@ exports.createMember = async (req, res) => {
       // -------------------------------
       // Build Fee Type List
       // -------------------------------
-      const feeTypeList = [];
+     const feeTypeList = [];
 
-      // Admission Fee
-      feeTypeList.push({
-        label: "Admission Fee",
-        value: subscription.admissionFee,
-        isRecurring: false
-      });
+// ----------------------
+// Admission Fee
+// ----------------------
+if (subscription.admissionFee > 0) {
+  feeTypeList.push({
+    key: "admission_fee",
+    label: "Admission Fee",
+    amount: subscription.admissionFee,
+    paidAmount: 0,
+    isRecurring: false,
+    status: "due"
+  });
+}
 
-      // Custom Fields (recurring + non-recurring)
-      subscription.customFields.forEach(field => {
-        feeTypeList.push({
-          label: field.label,
-          value: field.value,
-          isRecurring: field.isRecurring
-        });
-      });
+// ----------------------
+// Custom Fields (recurring & non-recurring)
+// ----------------------
+subscription.customFields.forEach((field, index) => {
+  feeTypeList.push({
+    key: `custom_${index}`,
+    label: field.label,
+    amount: field.value,
+    paidAmount: 0,
+    isRecurring: field.isRecurring,
+    status: "due"
+  });
+});
 
-      // Total amount
-      const firstBillAmount = feeTypeList.reduce((acc, cur) => acc + cur.value, 0);
+// ----------------------
+// Total Amount
+// ----------------------
+const firstBillAmount = feeTypeList.reduce(
+  (sum, fee) => sum + fee.amount,
+  0
+);
 
-      // ----- Create First Payment -----
-      await MemberPayment.create({
-        memberId: member._id,
-        clientId: req.user.id,
-        subscriptionId,
-        memberSubscriptionId: memberSubscription._id,
-        amount: firstBillAmount,
-        feeType: feeTypeList,   // 🎯 STORE ALL FEE DETAILS
-        dueDate: member.startDate,
-        status: "due",
-        paidAmount: 0
-      });
+// ----------------------
+// Create Payment
+// ----------------------
+await MemberPayment.create({
+  memberId: member._id,
+  clientId: req.user.id,
+  subscriptionId,
+  memberSubscriptionId: memberSubscription._id,
+  feeType: feeTypeList,
+  amount: firstBillAmount,
+  paidAmount: 0,
+  dueDate: member.startDate,
+  status: "due"
+});
+
     }
 
     return res.json({
@@ -192,80 +212,102 @@ exports.assignSubscriptionToMembers = async (req, res) => {
 
     const memberSubscriptions = [];
     const memberPayments = [];
+    let lastMemberSubscriptionId = null;
 
     for (const member of members) {
-      // ✅ Skip if already has subscription
       if (member.subscriptionId) continue;
 
-      // ---------- Calculate Renewal ----------
       const nextRenewalDate = calculateNextRenewal(
         member.startDate,
         subscription.billingCycle
       );
 
-      // ---------- Create MemberSubscription ----------
-      const memberSub = {
+      // 🔹 Create MemberSubscription
+      memberSubscriptions.push({
         memberId: member._id,
         clientId,
         subscriptionId,
         startDate: member.startDate,
         nextRenewalDate,
         status: "active"
-      };
-      memberSubscriptions.push(memberSub);
-
-      // ---------- Build Fee Types ----------
-      const feeTypeList = [];
-
-      feeTypeList.push({
-        label: "Admission Fee",
-        value: subscription.admissionFee,
-        isRecurring: false
       });
 
-      subscription.customFields.forEach(field => {
+      // ===============================
+      // 🔥 BUILD FEE TYPE LIST (FIXED)
+      // ===============================
+      const feeTypeList = [];
+
+      // Admission Fee (only if > 0)
+      if (subscription.admissionFee > 0) {
         feeTypeList.push({
+          key: "admission_fee",
+          label: "Admission Fee",
+          amount: subscription.admissionFee,
+          paidAmount: 0,
+          isRecurring: false,
+          status: "due"
+        });
+      }
+
+      // Custom Fields ONLY (no fake recurring fee)
+      subscription.customFields.forEach((field, index) => {
+        feeTypeList.push({
+          key: `custom_${index}`,
           label: field.label,
-          value: field.value,
-          isRecurring: field.isRecurring
+          amount: field.value,
+          paidAmount: 0,
+          isRecurring: field.isRecurring,
+          status: "due"
         });
       });
 
-      const amount = feeTypeList.reduce((a, b) => a + b.value, 0);
+      const totalAmount = feeTypeList.reduce(
+        (sum, f) => sum + f.amount,
+        0
+      );
 
       memberPayments.push({
         memberId: member._id,
         clientId,
         subscriptionId,
-        amount,
+        amount: totalAmount,
+        paidAmount: 0,
         feeType: feeTypeList,
         dueDate: member.startDate,
-        status: "due",
-        paidAmount: 0,
-        // memberSubscriptionId added later
+        status: "due"
       });
-
-      // ---------- Update member ----------
-      member.subscriptionId = subscriptionId;
-      await member.save();
     }
 
-    // ✅ Bulk insert subscriptions
-    const createdSubscriptions = await MemberSubscription.insertMany(
-      memberSubscriptions
-    );
+    // 🔹 Create MemberSubscriptions
+    const createdSubscriptions = await MemberSubscription.insertMany(memberSubscriptions);
 
-    // ✅ Attach subscriptionId to payments
-    createdSubscriptions.forEach((sub, index) => {
-      memberPayments[index].memberSubscriptionId = sub._id;
-    });
+    // 🔹 Link Member → Subscription & Payment
+    for (let i = 0; i < createdSubscriptions.length; i++) {
+      const sub = createdSubscriptions[i];
 
-    // ✅ Bulk insert payments
+      await Member.findByIdAndUpdate(sub.memberId, {
+        subscriptionId: sub._id
+      });
+
+      memberPayments[i].memberSubscriptionId = sub._id;
+      lastMemberSubscriptionId = sub._id;
+    }
+
     await MemberPayment.insertMany(memberPayments);
+
+    const populatedMember = await Member.findOne({
+      subscriptionId: lastMemberSubscriptionId
+    }).populate({
+      path: "subscriptionId",
+      populate: {
+        path: "subscriptionId",
+        model: "SubscriptionPackage"
+      }
+    });
 
     res.json({
       success: true,
-      assignedCount: createdSubscriptions.length,
+      member: populatedMember,
       message: "Subscription assigned successfully"
     });
 
@@ -277,6 +319,8 @@ exports.assignSubscriptionToMembers = async (req, res) => {
     });
   }
 };
+
+
 
 
 

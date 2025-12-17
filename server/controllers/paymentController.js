@@ -155,77 +155,69 @@ exports.getMemberPendingPayments = async (req, res) => {
 exports.quickPay = async (req, res) => {
   try {
     const { paymentId } = req.params;
-    const { amountPaid, mode } = req.body;
+    const { payments, mode } = req.body;
 
-    if (!amountPaid || amountPaid <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Paid amount must be greater than zero",
-      });
-    }
-
-    // 1️⃣ Fetch payment entry
     const payment = await MemberPayment.findById(paymentId);
     if (!payment) {
-      return res.status(404).json({
-        success: false,
-        message: "Payment record not found",
-      });
+      return res.status(404).json({ success: false, message: "Payment not found" });
     }
 
-    // 2️⃣ Calculate new total paid amount
-    const newTotalPaid = payment.paidAmount + amountPaid;
+    let totalPaidNow = 0;
 
-    // Prevent overpayment
-    if (newTotalPaid > payment.amount) {
-      return res.status(400).json({
-        success: false,
-        message: "Amount exceeds the due amount",
-      });
+    // 🔥 Update each fee individually
+    for (const pay of payments) {
+      const fee = payment.feeType.find(f => f.key === pay.feeKey);
+      if (!fee) continue;
+
+      const newPaid = fee.paidAmount + pay.amount;
+      if (newPaid > fee.amount) {
+        return res.status(400).json({
+          success: false,
+          message: `Overpayment for ${fee.label}`
+        });
+      }
+
+      fee.paidAmount = newPaid;
+
+      if (newPaid === fee.amount) fee.status = "paid";
+      else if (newPaid > 0) fee.status = "partial";
+
+      totalPaidNow += pay.amount;
     }
 
-    // 3️⃣ Set updated status
-    let newStatus = "partial";
-    if (newTotalPaid === payment.amount) {
-      newStatus = "paid";
-    } else if (newTotalPaid === 0) {
-      newStatus = "due";
+    // 🔥 Update global paidAmount
+    payment.paidAmount += totalPaidNow;
+
+    // 🔥 Update overall status
+    if (payment.paidAmount === payment.amount) {
+      payment.status = "paid";
+    } else if (payment.paidAmount > 0) {
+      payment.status = "partial";
     }
 
-    // 4️⃣ Update payment record
-    payment.paidAmount = newTotalPaid;
-    payment.status = newStatus;
     await payment.save();
 
-    // 5️⃣ If fully paid, mark member as active
-    if (newStatus === "paid"||"partial") {
+    // Member active if any payment done
+    if (payment.paidAmount > 0) {
       await Member.findByIdAndUpdate(payment.memberId, { status: "active" });
     }
 
-    // 6️⃣ Save transaction history
-    const transaction = await MemberTransaction.create({
-      paymentId,
-      memberId: payment.memberId,
-      clientId: payment.clientId,
-      paidAmount: amountPaid,
-      mode: mode || "cash",
-      memberSubscriptionId: payment.memberSubscriptionId,
-      subscriptionId: payment.subscriptionId,
-    });
+   const transaction = await MemberTransaction.create({
+  paymentId,
+  memberId: payment.memberId,
+  clientId: payment.clientId,
+  paidAmount: totalPaidNow,
+  mode: mode || "cash",
+  memberSubscriptionId: payment.memberSubscriptionId,
+  subscriptionId: payment.subscriptionId,
+  feeBreakdown: payments
+});
 
-    return res.status(200).json({
-      success: true,
-      message: "Payment updated successfully",
-      payment,
-      transaction,
-    });
+    res.json({ success: true, payment ,transaction});
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 

@@ -32,10 +32,6 @@ export const MemberProvider = ({ children }) => {
     }
   };
 
-  useEffect(()=>{
-fetchMembers()
-  },[])
-
   // ------------------------------------
   // GET SINGLE MEMBER
   // ------------------------------------
@@ -139,7 +135,8 @@ fetchMembers()
         createMember,
         updateMember,
         deleteMember,
-        toggleActive
+        toggleActive,
+        setMembers,
       }}
     >
       {children}

@@ -15,7 +15,7 @@ function addCycle(date, cycle) {
   return newDate;
 }
 
-cron.schedule("43 08 * * *", async () => {
+cron.schedule("53 10 * * *", async () => {
   console.log("🔄 Running daily subscription renewal check...");
 
   const today = new Date();
@@ -26,13 +26,16 @@ cron.schedule("43 08 * * *", async () => {
       nextRenewalDate: { $lte: today }
     })
       .populate("subscriptionId")
-      .populate("memberId"); // 👈 needed to check isActive
+      .populate("memberId");
 
     for (const sub of expiringSubs) {
-
-   
-
       console.log(`📌 Processing renewal for member: ${sub.memberId._id}`);
+
+      // ⛔ Skip inactive members
+      if (!sub.memberId?.isActive) {
+        console.log(`⛔ Skipped renewal — Member inactive: ${sub.memberId?._id}`);
+        continue;
+      }
 
       const pkg = sub.subscriptionId;
 
@@ -40,14 +43,16 @@ cron.schedule("43 08 * * *", async () => {
       sub.status = "expired";
       await sub.save();
 
-      await Member.findByIdAndUpdate(sub.memberId, { status: "expired" });
+      await Member.findByIdAndUpdate(sub.memberId._id, {
+        status: "expired"
+      });
 
-      // ---- 2️⃣ CREATE NEW ACTIVE SUBSCRIPTION ----
+      // ---- 2️⃣ CREATE NEW SUBSCRIPTION ----
       const newStartDate = sub.nextRenewalDate;
       const newRenewalDate = addCycle(newStartDate, pkg.billingCycle);
 
       const newMemberSubscription = await MemberSubscription.create({
-        memberId: sub.memberId,
+        memberId: sub.memberId._id,
         clientId: sub.clientId,
         subscriptionId: pkg._id,
         startDate: newStartDate,
@@ -55,42 +60,50 @@ cron.schedule("43 08 * * *", async () => {
         status: "active"
       });
 
-      // ---- 3️⃣ BUILD RECURRING FEES ----
+      // ---- 3️⃣ BUILD RECURRING FEES (FIXED) ----
       const recurringFees = pkg.customFields
         .filter(f => f.isRecurring === true)
-        .map(f => ({
-          label: f.label,
-          value: f.value,
-          isRecurring: true
+        .map((field, index) => ({
+          key: `custom_${index}`,
+          label: field.label,
+          amount: field.value,
+          paidAmount: 0,
+          isRecurring: true,
+          status: "due"
         }));
 
-           // ⛔ Do NOT renew if member is inactive
-      if (!sub.memberId?.isActive) {
-        console.log(`⛔ Skipped renewal — Member inactive: ${sub.memberId._id}`);
+      // If no recurring fees, skip bill creation
+      if (!recurringFees.length) {
+        console.log(`⚠️ No recurring fees for member ${sub.memberId._id}`);
         continue;
       }
 
-      const nextBillAmount = recurringFees.reduce((acc, cur) => acc + cur.value, 0);
+      const nextBillAmount = recurringFees.reduce(
+        (sum, f) => sum + f.amount,
+        0
+      );
 
-      // ---- 4️⃣ CREATE NEW BILL ----
+      // ---- 4️⃣ CREATE NEW PAYMENT ----
       await MemberPayment.create({
-        memberId: sub.memberId,
+        memberId: sub.memberId._id,
         clientId: sub.clientId,
         subscriptionId: pkg._id,
         memberSubscriptionId: newMemberSubscription._id,
         amount: nextBillAmount,
+        paidAmount: 0,
         feeType: recurringFees,
         dueDate: newStartDate,
-        status: "due",
-        paidAmount: 0
+        status: "due"
       });
 
-      console.log(`✨ Renewal created for member ${sub.memberId._id}`);
+      console.log(`✨ Renewal bill created for member ${sub.memberId._id}`);
     }
 
     console.log("🎉 Renewal Check Completed");
+
   } catch (error) {
     console.error("❌ CRON ERROR:", error);
   }
 });
+
 

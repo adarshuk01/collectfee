@@ -8,6 +8,7 @@ import { SubscriptionProvider } from './context/SubscriptionContext.jsx'
 import { MemberProvider } from './context/MemberContext.jsx'
 import { PaymentProvider } from './context/PaymentContext.jsx'
 import { BatchProvider } from './context/BatchContext.jsx'
+import "./i18n";
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
