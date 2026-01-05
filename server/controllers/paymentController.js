@@ -467,11 +467,13 @@ exports.generateReceiptPDF = async (req, res) => {
 
     if (!tx) {
       return res.status(404).json({ success: false, message: "Receipt not found" });
-    }
+    } 
+    console.log("my data",tx.paymentId);
+    
 
     // === Calculations ===
     const feeTypes = tx.paymentId.feeType || [];
-    const totalAmount = feeTypes.reduce((acc, f) => acc + f.value, 0);
+    const totalAmount = feeTypes.reduce((acc, f) => acc + f.amount, 0);
     const paidNow = tx.paidAmount;
     const alreadyPaid = tx.paymentId.paidAmount - paidNow;
     const remainingAmount = totalAmount - (alreadyPaid + paidNow);
@@ -551,9 +553,11 @@ if (settings.logoUrl) {
     doc.rect(40, tableTop, 510, 25).fill("#0B57D0");
     doc.fillColor("#fff")
       .text("Date", 50, tableTop + 7)
-      .text("Description", 150, tableTop + 7)
-      .text("Amount", 350, tableTop + 7)
-      .text("Type", 450, tableTop + 7);
+      .text("Fee Type", 150, tableTop + 7)
+      .text("Amount", 250, tableTop + 7)
+      .text("Paid", 320, tableTop + 7)
+      .text("Remaining", 400, tableTop + 7)
+      .text("Type", 500, tableTop + 7);
 
     doc.fillColor("#000");
 
@@ -566,8 +570,10 @@ if (settings.logoUrl) {
       doc.font("Roboto").fontSize(11)
         .text(new Date(tx.createdAt).toLocaleDateString(), 50, y + 7)
         .text(f.label, 150, y + 7)
-        .text(`₹${f.value}`, 350, y + 7)
-        .text(f.isRecurring ? "Recurring" : "One-Time", 450, y + 7);
+        .text(`₹${f.amount}`, 250, y + 7)
+        .text(`₹${f.paidAmount}`, 320, y + 7)
+        .text(`₹${f.amount-f.paidAmount}`, 400, y + 7)
+        .text(f.isRecurring ? "Recurring" : "One-Time", 500, y + 7);
 
       y += 25;
     });

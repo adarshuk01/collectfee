@@ -15,7 +15,7 @@ function addCycle(date, cycle) {
   return newDate;
 }
 
-cron.schedule("53 10 * * *", async () => {
+cron.schedule("52 14 * * *", async () => {
   console.log("🔄 Running daily subscription renewal check...");
 
   const today = new Date();

@@ -4,6 +4,7 @@ const MemberSubscription = require("../models/memberSubscription")
 const SubscriptionPackage = require("../models/SubscriptionPackage");
 const MemberPayment = require("../models/MemberPayment");
 const mongoose = require("mongoose");
+const { createSubscriptionAndPayment } = require("../utils/createSubscriptionAndPayment");
 
 function calculateNextRenewal(startDate, billingCycle) {
     const date = new Date(startDate);
@@ -54,119 +55,29 @@ exports.createMember = async (req, res) => {
   try {
     const { email, contactNumber, subscriptionId } = req.body;
 
-    // ----- Check Email -----
     if (email) {
-      const existingEmail = await Member.findOne({ clientId: req.user.id, email });
-      if (existingEmail) {
-        return res.status(400).json({
-          success: false,
-          message: "A member with this email already exists under this client"
-        });
-      }
+      const exists = await Member.findOne({ clientId: req.user.id, email });
+      if (exists) return res.status(400).json({ success: false, message: "Email already exists" });
     }
 
-    // ----- Check Phone -----
     if (contactNumber) {
-      const existingPhone = await Member.findOne({ clientId: req.user.id, contactNumber });
-      if (existingPhone) {
-        return res.status(400).json({
-          success: false,
-          message: "A member with this phone number already exists under this client"
-        });
-      }
+      const exists = await Member.findOne({ clientId: req.user.id, contactNumber });
+      if (exists) return res.status(400).json({ success: false, message: "Phone already exists" });
     }
 
-    // ----- Create Member -----
     const member = await Member.create({
       clientId: req.user.id,
-      ...req.body,
-      subscriptionId
+      ...req.body
     });
 
-    // ===============================================================
-    //                    FIRST PAYMENT CREATION
-    // ===============================================================
-    if (subscriptionId) {
-      const subscription = await SubscriptionPackage.findById(subscriptionId);
-
-      const nextRenewalDate = calculateNextRenewal(
-        member.startDate,
-        subscription.billingCycle
-      );
-
-      // ----- Create Member-Subscription -----
-      const memberSubscription = await MemberSubscription.create({
-        memberId: member._id,
-        clientId: req.user.id,
-        subscriptionId,
-        startDate: member.startDate,
-        nextRenewalDate,
-        status: "active"
-      });
-
-      // -------------------------------
-      // Build Fee Type List
-      // -------------------------------
-     const feeTypeList = [];
-
-// ----------------------
-// Admission Fee
-// ----------------------
-if (subscription.admissionFee > 0) {
-  feeTypeList.push({
-    key: "admission_fee",
-    label: "Admission Fee",
-    amount: subscription.admissionFee,
-    paidAmount: 0,
-    isRecurring: false,
-    status: "due"
-  });
-}
-
-// ----------------------
-// Custom Fields (recurring & non-recurring)
-// ----------------------
-subscription.customFields.forEach((field, index) => {
-  feeTypeList.push({
-    key: `custom_${index}`,
-    label: field.label,
-    amount: field.value,
-    paidAmount: 0,
-    isRecurring: field.isRecurring,
-    status: "due"
-  });
-});
-
-// ----------------------
-// Total Amount
-// ----------------------
-const firstBillAmount = feeTypeList.reduce(
-  (sum, fee) => sum + fee.amount,
-  0
-);
-
-// ----------------------
-// Create Payment
-// ----------------------
-await MemberPayment.create({
-  memberId: member._id,
-  clientId: req.user.id,
-  subscriptionId,
-  memberSubscriptionId: memberSubscription._id,
-  feeType: feeTypeList,
-  amount: firstBillAmount,
-  paidAmount: 0,
-  dueDate: member.startDate,
-  status: "due"
-});
-
-    }
-
-    return res.json({
-      success: true,
-      message: "Member created successfully",
-      member
+    await createSubscriptionAndPayment({
+      member,
+      clientId: req.user.id,
+      subscriptionId,
+      startDate: member.startDate
     });
+
+    res.json({ success: true, message: "Member created", member });
 
   } catch (err) {
     console.error(err);
@@ -475,118 +386,79 @@ exports.getMember = async (req, res) => {
 
 // ➤ Update member + update subscription + update payment
 exports.updateMember = async (req, res) => {
-    try {
-        const { email, contactNumber, subscriptionId } = req.body;
-        const memberId = req.params.id;
+  try {
+    const { email, contactNumber, subscriptionId } = req.body;
+    const memberId = req.params.id;
 
-        // ===============================
-        // 🔍 Duplicate email/phone check
-        // ===============================
-        const existing = await Member.findOne({
-            clientId: req.user.id,
-            _id: { $ne: memberId },
-            $or: [{ email }, { contactNumber }],
-        });
+    const duplicate = await Member.findOne({
+      clientId: req.user.id,
+      _id: { $ne: memberId },
+      $or: [{ email }, { contactNumber }]
+    });
 
-        if (existing) {
-            return res.status(400).json({
-                success: false,
-                message: "Another member with this email or phone already exists",
-            });
-        }
-
-        // ➤ Update member details
-        const updatedMember = await Member.findByIdAndUpdate(memberId, req.body, { new: true });
-        if (!updatedMember) {
-            return res.status(404).json({ message: "Member not found" });
-        }
-
-        // ❗ Member’s updated startDate (needed for payment)
-        const updatedStartDate = req.body.startDate || updatedMember.startDate;
-
-        // ===============================
-        // 🔥 SUBSCRIPTION UPDATE LOGIC
-        // ===============================
-
-        const existingSubscription = await MemberSubscription.findOne({
-            memberId,
-            status: "active",
-        });
-
-        // CASE A ➤ No subscription selected but had one → deactivate
-        if (!subscriptionId && existingSubscription) {
-            existingSubscription.status = "inactive";
-            await existingSubscription.save();
-        }
-
-        // CASE B ➤ New/different subscription selected → deactivate old + create new
-        if (
-            subscriptionId &&
-            (!existingSubscription || existingSubscription.subscriptionId.toString() !== subscriptionId)
-        ) {
-            // deactivate old
-            if (existingSubscription) {
-                existingSubscription.status = "inactive";
-                await existingSubscription.save();
-            }
-
-            // fetch new subscription
-            const subscriptionPackage = await SubscriptionPackage.findById(subscriptionId);
-            const nextRenewalDate = calculateNextRenewal(updatedStartDate, subscriptionPackage.billingCycle);
-
-            // create new subscription record
-            await MemberSubscription.create({
-                memberId,
-                clientId: req.user.id,
-                subscriptionId,
-                startDate: updatedStartDate,
-                nextRenewalDate,
-                status: "active",
-            });
-
-            // 🔥 CREATE NEW PAYMENT (due)
-            const totalAmount = subscriptionPackage.customFields.reduce(
-                (acc, f) => acc + f.value,
-                0
-            ) + subscriptionPackage.admissionFee;
-
-            await MemberPayment.create({
-                memberId,
-                clientId: req.user.id,
-                subscriptionId,
-                amount: totalAmount,
-                dueDate: updatedStartDate,
-                paidAmount: 0,
-                status: "due",
-            });
-        }
-
-        // CASE C ➤ Same subscription + startDate changed → update renewal date
-        if (
-            subscriptionId &&
-            existingSubscription &&
-            existingSubscription.subscriptionId.toString() === subscriptionId &&
-            updatedStartDate &&
-            updatedStartDate !== existingSubscription.startDate.toISOString().split("T")[0]
-        ) {
-            const subscriptionPackage = await SubscriptionPackage.findById(subscriptionId);
-            const nextRenewalDate = calculateNextRenewal(updatedStartDate, subscriptionPackage.billingCycle);
-
-            existingSubscription.startDate = updatedStartDate;
-            existingSubscription.nextRenewalDate = nextRenewalDate;
-            await existingSubscription.save();
-        }
-
-        return res.json({
-            success: true,
-            message: "Member updated successfully",
-            member: updatedMember,
-        });
-
-    } catch (error) {
-        console.error("Update Member Error:", error);
-        return res.status(500).json({ error: error.message });
+    if (duplicate) {
+      return res.status(400).json({
+        success: false,
+        message: "Email or phone already exists"
+      });
     }
+
+    const member = await Member.findByIdAndUpdate(memberId, req.body, { new: true });
+    if (!member) return res.status(404).json({ message: "Member not found" });
+
+    const updatedStartDate = req.body.startDate || member.startDate;
+
+    const activeSubscription = await MemberSubscription.findOne({
+      memberId,
+      status: "active"
+    });
+
+    // ➤ Remove subscription
+    if (!subscriptionId && activeSubscription) {
+      activeSubscription.status = "inactive";
+      await activeSubscription.save();
+    }
+
+    // ➤ Change subscription
+    if (
+      subscriptionId &&
+      (!activeSubscription || activeSubscription.subscriptionId.toString() !== subscriptionId)
+    ) {
+      if (activeSubscription) {
+        activeSubscription.status = "inactive";
+        await activeSubscription.save();
+      }
+
+      await createSubscriptionAndPayment({
+        member,
+        clientId: req.user.id,
+        subscriptionId,
+        startDate: updatedStartDate
+      });
+    }
+
+    // ➤ Same subscription but date changed
+    if (
+      subscriptionId &&
+      activeSubscription &&
+      activeSubscription.subscriptionId.toString() === subscriptionId &&
+      updatedStartDate !== activeSubscription.startDate.toISOString()
+    ) {
+      const sub = await SubscriptionPackage.findById(subscriptionId);
+      activeSubscription.startDate = updatedStartDate;
+      activeSubscription.nextRenewalDate = calculateNextRenewal(
+        updatedStartDate,
+        sub.billingCycle
+      );
+      await activeSubscription.save();
+    }
+
+    res.json({ success: true, message: "Member updated", member });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
 
