@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import axiosInstance from "../api/axiosInstance";
 import toast from "react-hot-toast";
 
@@ -10,104 +10,137 @@ export const MemberProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // ------------------------------------
-  // GET MEMBERS BY CLIENT
-  // ------------------------------------
-  const fetchMembers = async () => {
-    
-    
+  const [filters, setFilters] = useState({
+    search: "",
+    status: "all",
+    dueMin: "",
+    dueMax: "",
+  });
+
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+    totalMembers: 0,
+  });
+
+  // Use ref to store the current AbortController
+  const fetchController = useRef(null);
+
+  // ================= FETCH MEMBERS =================
+  const fetchMembers = async (filtersParam = filters, pageParam = pagination.page) => {
+    // Cancel previous request if exists
+    if (fetchController.current) fetchController.current.abort();
+    fetchController.current = new AbortController();
+    const signal = fetchController.current.signal;
+
     try {
       setLoading(true);
-      const res = await axiosInstance.get(`/members/client`);
-      console.log(res);
-      toast.success("Member loaded");
-      
-      setMembers(res.data);
+      setError("");
+
+      const params = {
+        search: filtersParam.search,
+        status: filtersParam.status,
+        dueMin: filtersParam.dueMin,
+        dueMax: filtersParam.dueMax,
+        page: pageParam,
+        limit: pagination.limit,
+      };
+
+      const res = await axiosInstance.get("/members/client/search", { params, signal });
+
+      setMembers(res.data.data);
+
+      // Clamp page in case it went out of bounds
+      const newPage = Math.min(Math.max(res.data.page, 1), res.data.totalPages || 1);
+
+      setPagination((prev) => ({
+        ...prev,
+        page: newPage,
+        totalPages: res.data.totalPages,
+        totalMembers: res.data.totalMembers,
+      }));
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load members");
-      console.log(err);
-      
+      if (err.name !== "CanceledError") {
+        setError(err.response?.data?.message || "Failed to load members");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // ------------------------------------
-  // GET SINGLE MEMBER
-  // ------------------------------------
+  // ================= AUTO REFRESH =================
+  useEffect(() => {
+    fetchMembers(filters, pagination.page);
+  }, [filters, pagination.page]);
+
+  // ================= UPDATE FILTERS =================
+  const updateFilters = (newFilters) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+    setPagination((prev) => ({ ...prev, page: 1 })); // reset page to 1
+  };
+
+  // ================= FETCH SINGLE MEMBER =================
   const fetchMemberById = async (id) => {
     try {
       setLoading(true);
-       setSingleMember(null);
+      setSingleMember(null);
+
       const res = await axiosInstance.get(`/members/${id}`);
       setSingleMember(res.data.member);
-      console.log(res);
-      
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load member");
-      console.log(err);
-      
     } finally {
       setLoading(false);
     }
   };
 
-  // ------------------------------------
-  // CREATE MEMBER
-  // ------------------------------------
-  const createMember = async ( data) => {
+  // ================= CREATE MEMBER =================
+  const createMember = async (data) => {
     try {
       setLoading(true);
-      const res = await axiosInstance.post(`/members`, data);
-      setMembers((prev) => [...prev, res.data]);
-      console.log(res);
+      const res = await axiosInstance.post("/members", data);
+      toast.success(res.data.message || "Member created");
 
-      toast.success(res.data.message);
-      fetchMembers()
+      // Fetch members with latest filters and current page
+      fetchMembers(filters, pagination.page);
 
-
-      
       return res.data;
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create member");
-      toast.error(error)
+      const msg = err.response?.data?.message || "Failed to create member";
+      setError(msg);
+      toast.error(msg);
       throw err;
     } finally {
       setLoading(false);
-
     }
   };
 
-  // ------------------------------------
-  // UPDATE MEMBER
-  // ------------------------------------
+  // ================= UPDATE MEMBER =================
   const updateMember = async (id, data) => {
     try {
       setLoading(true);
       const res = await axiosInstance.put(`/members/${id}`, data);
-      setMembers((prev) =>
-        prev.map((item) => (item._id === id ? res.data : item))
-      );
+      toast.success("Member updated");
+
+      fetchMembers(filters, pagination.page);
       return res.data;
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update member");
-
-      console.log(err);
-      
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // ------------------------------------
-  // DELETE MEMBER
-  // ------------------------------------
+  // ================= DELETE MEMBER =================
   const deleteMember = async (id) => {
     try {
       setLoading(true);
       await axiosInstance.delete(`/members/${id}`);
-      setMembers((prev) => prev.filter((item) => item._id !== id));
+      toast.success("Member deleted");
+
+      fetchMembers(filters, pagination.page);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to delete member");
     } finally {
@@ -115,13 +148,15 @@ export const MemberProvider = ({ children }) => {
     }
   };
 
+  // ================= TOGGLE ACTIVE =================
   const toggleActive = async (memberId) => {
-  const res = await axiosInstance.patch(`/members/${memberId}/toggle-active`);
-  console.log(res.data);
-
-  // Refresh UI after toggle
-  fetchMemberById(memberId);
-};
+    try {
+      await axiosInstance.patch(`/members/${memberId}/toggle-active`);
+      fetchMemberById(memberId);
+    } catch (err) {
+      toast.error("Failed to update status");
+    }
+  };
 
   return (
     <MemberContext.Provider
@@ -130,6 +165,10 @@ export const MemberProvider = ({ children }) => {
         singleMember,
         loading,
         error,
+        filters,
+        updateFilters,
+        pagination,
+        setPagination,
         fetchMembers,
         fetchMemberById,
         createMember,
@@ -144,5 +183,4 @@ export const MemberProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use MemberContext
 export const useMembers = () => useContext(MemberContext);

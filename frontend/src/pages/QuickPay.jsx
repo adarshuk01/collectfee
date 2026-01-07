@@ -6,7 +6,12 @@ import CommonHeader from "../components/common/CommonHeader";
 import toast from "react-hot-toast";
 
 function QuickPay() {
-  const { members } = useMembers();
+  const {
+    members,
+    fetchMembers,
+    updateFilters,
+  } = useMembers();
+
   const { payments, fetchPendingPayments, quickPay } = usePayments();
 
   const [selectedMember, setSelectedMember] = useState("");
@@ -17,9 +22,21 @@ function QuickPay() {
   // 🔥 Fee-wise state
   const [selectedFees, setSelectedFees] = useState({});
 
-  // 🔍 Member search
+  // 🔍 Member search (SERVER SIDE)
   const [memberSearch, setMemberSearch] = useState("");
   const [showMemberList, setShowMemberList] = useState(false);
+
+
+  /* ================= DEBOUNCED SEARCH ================= */
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      updateFilters({ search: memberSearch });
+      fetchMembers({ page: 1 });
+    }, 400);
+
+    return () => clearTimeout(delay);
+  }, [memberSearch]);
+
 
   const formatDate = (date) => {
     if (!date) return "";
@@ -39,6 +56,9 @@ function QuickPay() {
     }
   }, [selectedMember]);
 
+  console.log('selectedPayment', selectedPayment);
+
+
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = () => setShowMemberList(false);
@@ -48,19 +68,19 @@ function QuickPay() {
 
   // Select a bill
   const handleSelectPayment = (payment) => {
-  setSelectedPayment(payment);
+    setSelectedPayment(payment);
 
-  const initialFees = {};
-  payment.feeType.forEach((fee) => {
-    const remaining = fee.amount - fee.paidAmount;
-    if (remaining > 0) {
-      // ✅ show remaining amount by default
-      initialFees[fee.key] = remaining;
-    }
-  });
+    const initialFees = {};
+    payment.feeType.forEach((fee) => {
+      const remaining = fee.amount - fee.paidAmount;
+      if (remaining > 0) {
+        // ✅ show remaining amount by default
+        initialFees[fee.key] = remaining;
+      }
+    });
 
-  setSelectedFees(initialFees);
-};
+    setSelectedFees(initialFees);
+  };
 
   // Toggle fee checkbox
   const toggleFee = (feeKey, checked) => {
@@ -103,8 +123,8 @@ function QuickPay() {
       paymentsPayload,
       mode
     );
-    console.log('response',response);
-    
+    console.log('response', response);
+
 
     setLoading(false);
 
@@ -143,29 +163,22 @@ function QuickPay() {
 
         {showMemberList && (
           <div className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-60 overflow-y-auto">
-            {members
-              .filter((m) =>
-                m.fullName.toLowerCase().includes(memberSearch.toLowerCase())
-              )
-              .map((m) => (
-                <div
-                  key={m._id}
-                  onClick={() => {
-                    setSelectedMember(m._id);
-                    setMemberSearch(m.fullName);
-                    setShowMemberList(false);
-                  }}
-                  className="px-3 py-2 cursor-pointer hover:bg-gray-100"
-                >
-                  {m.fullName}
-                </div>
-              ))}
+            {members.map((m) => (
+              <div onClick={() => {
+                setSelectedMember(m._id);
+                setMemberSearch(m.fullName);
+                setShowMemberList(false);
+              }}
+                className="px-3 py-2 cursor-pointer hover:bg-gray-100" key={m._id}>
+                {m.fullName}
+              </div>
+            ))}
 
             {members.filter((m) =>
               m.fullName.toLowerCase().includes(memberSearch.toLowerCase())
             ).length === 0 && (
-              <p className="px-3 py-2 text-gray-500">No members found</p>
-            )}
+                <p className="px-3 py-2 text-gray-500">No members found</p>
+              )}
           </div>
         )}
       </div>
@@ -184,11 +197,10 @@ function QuickPay() {
                 <div
                   key={p._id}
                   onClick={() => handleSelectPayment(p)}
-                  className={`border p-3 rounded cursor-pointer ${
-                    selectedPayment?._id === p._id
+                  className={`border p-3 rounded cursor-pointer ${selectedPayment?._id === p._id
                       ? "bg-blue-100 border-blue-500"
                       : "border-gray-300"
-                  }`}
+                    }`}
                 >
                   <h3>Bill Date: {formatDate(p?.dueDate)}</h3>
                   <p className="text-sm">

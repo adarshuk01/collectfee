@@ -236,60 +236,201 @@ exports.assignSubscriptionToMembers = async (req, res) => {
 
 
 
-// ➤ Get all members under a client with subscription + due amounts
+// ➤ Get all members under a client with subscription + due amounts (LIMITED)
 exports.getMembersByClient = async (req, res) => {
   try {
-    const members = await Member.find({ clientId: req.user.id });
+    const limit = parseInt(req.query.limit) || 10; // default 10
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+
+    const members = await Member.find({ clientId: req.user.id })
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 }); // optional: latest first
 
     const response = await Promise.all(
       members.map(async (member) => {
-        
-        // 1️⃣ Get active subscription
+
+        // 1️⃣ Active subscription
         const subscription = await MemberSubscription.findOne({
           memberId: member._id,
           status: "active",
         }).populate("subscriptionId");
 
-        // 2️⃣ Calculate remaining days
+        // 2️⃣ Remaining days
         let remainingDays = null;
-
         if (subscription?.nextRenewalDate) {
           const now = new Date();
           const expiry = new Date(subscription.nextRenewalDate);
-
           remainingDays = Math.max(
             0,
             Math.ceil((expiry - now) / (1000 * 60 * 60 * 24))
           );
         }
 
-        // 3️⃣ Get all due payments for this member
+        // 3️⃣ Due payments
         const payments = await MemberPayment.find({
           memberId: member._id,
-          status: { $in: ["due", "partial"] } // only unpaid
+          status: { $in: ["due", "partial"] },
         });
 
-        // 4️⃣ Calculate total due amount
-        let dueAmount = 0;
-
-        payments.forEach((p) => {
-          dueAmount += p.amount - p.paidAmount;
-        });
+        // 4️⃣ Total due
+        const dueAmount = payments.reduce(
+          (sum, p) => sum + (p.amount - p.paidAmount),
+          0
+        );
 
         return {
           ...member.toObject(),
           subscription: subscription || null,
           remainingDays,
-          dueAmount,   // ✅ added here
+          dueAmount,
         };
       })
     );
 
-    res.json(response);
+    // 🔹 Total count (for frontend pagination)
+    const totalMembers = await Member.countDocuments({ clientId: req.user.id });
+
+    res.json({
+      data: response,
+      page,
+      limit,
+      totalMembers,
+      totalPages: Math.ceil(totalMembers / limit),
+    });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+
+exports.searchMembersByClient = async (req, res) => {
+  try {
+    const clientId = new mongoose.Types.ObjectId(req.user.id);
+
+    const {
+      search = "",
+      status = "all",
+      dueMin,
+      dueMax,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const skip = (page - 1) * limit;
+
+    /* ================= BASE MATCH ================= */
+    const match = { clientId };
+
+    if (search) {
+      match.$or = [
+        { fullName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { contactNumber: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (status !== "all") {
+      if (status === "active") match.isActive = true;
+      if (status === "inactive") match.isActive = false;
+      if (status === "expired") match.status = "expired";
+    }
+
+    /* ================= PIPELINE ================= */
+    const pipeline = [
+      { $match: match },
+
+      // Join payments
+      {
+        $lookup: {
+          from: "memberpayments",
+          localField: "_id",
+          foreignField: "memberId",
+          as: "payments",
+        },
+      },
+
+      // Calculate dueAmount safely
+      {
+        $addFields: {
+          dueAmount: {
+            $ifNull: [
+              {
+                $sum: {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: "$payments",
+                        as: "p",
+                        cond: {
+                          $in: ["$$p.status", ["due", "partial"]],
+                        },
+                      },
+                    },
+                    as: "p",
+                    in: {
+                      $subtract: [
+                        { $ifNull: ["$$p.amount", 0] },
+                        { $ifNull: ["$$p.paidAmount", 0] },
+                      ],
+                    },
+                  },
+                },
+              },
+              0,
+            ],
+          },
+        },
+      },
+    ];
+
+    /* ================= DUE FILTERS ================= */
+    if (dueMin) {
+      pipeline.push({
+        $match: { dueAmount: { $gte: Number(dueMin) } },
+      });
+    }
+
+    if (dueMax) {
+      pipeline.push({
+        $match: { dueAmount: { $lte: Number(dueMax) } },
+      });
+    }
+
+    /* ================= COUNT ================= */
+    const countPipeline = [...pipeline, { $count: "total" }];
+    const countResult = await Member.aggregate(countPipeline);
+    const totalMembers = countResult[0]?.total || 0;
+
+    /* ================= PAGINATION ================= */
+    pipeline.push(
+      { $sort: { createdAt: -1 } },
+      { $skip: Number(skip) },
+      { $limit: Number(limit) }
+    );
+
+    const members = await Member.aggregate(pipeline);
+
+    res.json({
+      data: members,
+      page: Number(page),
+      limit: Number(limit),
+      totalMembers,
+      totalPages: Math.ceil(totalMembers / limit),
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+
+
 
 
 
