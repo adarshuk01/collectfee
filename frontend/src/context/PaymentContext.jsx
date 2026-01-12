@@ -7,53 +7,47 @@ export const PaymentContext = createContext();
 
 export const PaymentProvider = ({ children }) => {
   const [payments, setPayments] = useState([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
   const navigate = useNavigate();
 
   // 🔹 Fetch pending / partial payments for member
   const fetchPendingPayments = async (memberId) => {
     try {
+      setPaymentsLoading(true);
       const res = await axiosInstance.get(`/payments/pending/${memberId}`);
       setPayments(res.data.pendingPayments || []);
     } catch (err) {
       console.error("Fetch payments error:", err);
+    } finally {
+      setPaymentsLoading(false);
     }
   };
 
-  // 🔹 Quick Pay (fee-wise)
+  // 🔹 Quick Pay
   const quickPay = async (paymentId, paymentsPayload, mode) => {
     try {
       const res = await axiosInstance.patch(
         `/payments/quick-pay/${paymentId}`,
-        {
-          payments: paymentsPayload,
-          mode
-        }
+        { payments: paymentsPayload, mode }
       );
 
       const { payment, transaction } = res.data;
 
-      // 🔥 Update payment in list instead of removing blindly
       setPayments((prev) =>
         prev
           .map((p) => (p._id === payment._id ? payment : p))
-          .filter((p) => p.status !== "paid") // remove only if fully paid
+          .filter((p) => p.status !== "paid")
       );
 
-      // 🔁 Navigate to receipt
       if (transaction?._id) {
         navigate(`/receipt/${transaction._id}`);
       }
 
-      return {
-        success: true,
-        payment,
-        transaction
-      };
+      return { success: true, payment, transaction };
     } catch (err) {
-      console.error("Quick pay error:", err);
       return {
         success: false,
-        message: err?.response?.data?.message || "Payment failed"
+        message: err?.response?.data?.message || "Payment failed",
       };
     }
   };
@@ -62,8 +56,9 @@ export const PaymentProvider = ({ children }) => {
     <PaymentContext.Provider
       value={{
         payments,
+        paymentsLoading,
         fetchPendingPayments,
-        quickPay
+        quickPay,
       }}
     >
       {children}
@@ -71,5 +66,4 @@ export const PaymentProvider = ({ children }) => {
   );
 };
 
-// Custom hook
 export const usePayments = () => useContext(PaymentContext);

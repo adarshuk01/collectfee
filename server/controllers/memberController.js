@@ -236,78 +236,7 @@ exports.assignSubscriptionToMembers = async (req, res) => {
 
 
 
-// ➤ Get all members under a client with subscription + due amounts (LIMITED)
 exports.getMembersByClient = async (req, res) => {
-  try {
-    const limit = parseInt(req.query.limit) || 10; // default 10
-    const page = parseInt(req.query.page) || 1;
-    const skip = (page - 1) * limit;
-
-    const members = await Member.find({ clientId: req.user.id })
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 }); // optional: latest first
-
-    const response = await Promise.all(
-      members.map(async (member) => {
-
-        // 1️⃣ Active subscription
-        const subscription = await MemberSubscription.findOne({
-          memberId: member._id,
-          status: "active",
-        }).populate("subscriptionId");
-
-        // 2️⃣ Remaining days
-        let remainingDays = null;
-        if (subscription?.nextRenewalDate) {
-          const now = new Date();
-          const expiry = new Date(subscription.nextRenewalDate);
-          remainingDays = Math.max(
-            0,
-            Math.ceil((expiry - now) / (1000 * 60 * 60 * 24))
-          );
-        }
-
-        // 3️⃣ Due payments
-        const payments = await MemberPayment.find({
-          memberId: member._id,
-          status: { $in: ["due", "partial"] },
-        });
-
-        // 4️⃣ Total due
-        const dueAmount = payments.reduce(
-          (sum, p) => sum + (p.amount - p.paidAmount),
-          0
-        );
-
-        return {
-          ...member.toObject(),
-          subscription: subscription || null,
-          remainingDays,
-          dueAmount,
-        };
-      })
-    );
-
-    // 🔹 Total count (for frontend pagination)
-    const totalMembers = await Member.countDocuments({ clientId: req.user.id });
-
-    res.json({
-      data: response,
-      page,
-      limit,
-      totalMembers,
-      totalPages: Math.ceil(totalMembers / limit),
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-
-
-exports.searchMembersByClient = async (req, res) => {
   try {
     const clientId = new mongoose.Types.ObjectId(req.user.id);
 
@@ -343,7 +272,68 @@ exports.searchMembersByClient = async (req, res) => {
     const pipeline = [
       { $match: match },
 
-      // Join payments
+      /* 🔹 Active Subscription */
+      {
+        $lookup: {
+          from: "membersubscriptions",
+          let: { memberId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$memberId", "$$memberId"] },
+                    { $eq: ["$status", "active"] },
+                  ],
+                },
+              },
+            },
+            /* ✅ POPULATE subscriptionId */
+      {
+        $lookup: {
+          from: "subscriptionpackages",   // ✅ FIX HERE
+          localField: "subscriptionId",
+          foreignField: "_id",
+          as: "subscriptionId",
+        },
+      },
+            { $unwind: { path: "$subscriptionId", preserveNullAndEmptyArrays: true } },
+          ],
+          as: "subscription",
+        },
+      },
+      {
+        $addFields: {
+          subscription: { $arrayElemAt: ["$subscription", 0] },
+        },
+      },
+
+      /* 🔹 Remaining Days */
+      {
+        $addFields: {
+          remainingDays: {
+            $cond: [
+              { $ifNull: ["$subscription.nextRenewalDate", false] },
+              {
+                $max: [
+                  0,
+                  {
+                    $ceil: {
+                      $divide: [
+                        { $subtract: ["$subscription.nextRenewalDate", new Date()] },
+                        1000 * 60 * 60 * 24,
+                      ],
+                    },
+                  },
+                ],
+              },
+              null,
+            ],
+          },
+        },
+      },
+
+      /* 🔹 Payments */
       {
         $lookup: {
           from: "memberpayments",
@@ -353,7 +343,7 @@ exports.searchMembersByClient = async (req, res) => {
         },
       },
 
-      // Calculate dueAmount safely
+      /* 🔹 Due Amount */
       {
         $addFields: {
           dueAmount: {
@@ -365,9 +355,7 @@ exports.searchMembersByClient = async (req, res) => {
                       $filter: {
                         input: "$payments",
                         as: "p",
-                        cond: {
-                          $in: ["$$p.status", ["due", "partial"]],
-                        },
+                        cond: { $in: ["$$p.status", ["due", "partial"]] },
                       },
                     },
                     as: "p",
@@ -387,18 +375,9 @@ exports.searchMembersByClient = async (req, res) => {
       },
     ];
 
-    /* ================= DUE FILTERS ================= */
-    if (dueMin) {
-      pipeline.push({
-        $match: { dueAmount: { $gte: Number(dueMin) } },
-      });
-    }
-
-    if (dueMax) {
-      pipeline.push({
-        $match: { dueAmount: { $lte: Number(dueMax) } },
-      });
-    }
+    /* ================= DUE FILTER ================= */
+    if (dueMin) pipeline.push({ $match: { dueAmount: { $gte: Number(dueMin) } } });
+    if (dueMax) pipeline.push({ $match: { dueAmount: { $lte: Number(dueMax) } } });
 
     /* ================= COUNT ================= */
     const countPipeline = [...pipeline, { $count: "total" }];
@@ -427,6 +406,7 @@ exports.searchMembersByClient = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 
 

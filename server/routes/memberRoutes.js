@@ -31,6 +31,6 @@ router.post('/assign-subscription',authMiddleware , assignSubscriptionToMembers)
 
 router.patch("/:memberId/toggle-active", authMiddleware, toggleMemberActive);
 
-router.get('/client/search',authMiddleware,searchMembersByClient)
+// router.get('/client/search',authMiddleware,searchMembersByClient)
 
 module.exports = router;

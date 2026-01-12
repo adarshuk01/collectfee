@@ -29,7 +29,6 @@ const MemberRowSkeleton = () => (
 function Members() {
   const navigate = useNavigate();
 
-  // ✅ Context
   const {
     members,
     fetchMembers,
@@ -43,37 +42,35 @@ function Members() {
 
   const { subscriptions, fetchSubscriptions } = useSubscription();
 
-  // ✅ Pagination
   const limit = 10;
 
-  // ✅ UI states
   const [showModal, setShowModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [subscriptionId, setSubscriptionId] = useState("");
   const [assigning, setAssigning] = useState(false);
-
 
   /* ================= Initial Load ================= */
   useEffect(() => {
     fetchSubscriptions();
   }, []);
 
+  /* ================= 🔥 Debounced Filters ================= */
+  const [debouncedFilters, setDebouncedFilters] = useState(filters);
+
   useEffect(() => {
-    fetchMembers();
-  }, [
-    filters.search,
-    filters.status,
-    filters.dueMin,
-    filters.dueMax,
-    pagination.page,
-  ]);
+    const timer = setTimeout(() => {
+      setDebouncedFilters(filters);
+    }, 500); // ⏱️ debounce delay
 
+    return () => clearTimeout(timer);
+  }, [filters.search, filters.dueMin, filters.dueMax]);
 
+ 
 
   /* ================= Assign Subscription ================= */
   const assignSubscription = async () => {
     if (!subscriptionId || !selectedMember) return;
-
+ 
     try {
       setAssigning(true);
 
@@ -86,17 +83,19 @@ function Members() {
         (s) => s._id === subscriptionId
       );
 
+      fetchMembers()
+
       setMembers((prev) =>
         prev.map((m) =>
           m._id === selectedMember._id
             ? {
-              ...m,
-              subscription: {
-                subscriptionId: selectedSubscription,
-                status: "active",
-                startDate: new Date(),
-              },
-            }
+                ...m,
+                subscription: {
+                  subscriptionId: selectedSubscription,
+                  status: "active",
+                  startDate: new Date(),
+                },
+              }
             : m
         )
       );
@@ -110,9 +109,6 @@ function Members() {
       setAssigning(false);
     }
   };
-
-  /* ================= Filters (Client-side) ================= */
-
 
   /* ================= Render ================= */
   return (
@@ -143,19 +139,17 @@ function Members() {
           placeholder="Search name or email"
           className="border border-gray-300 focus:outline-none px-3 py-2 rounded"
           value={filters.search}
-          onChange={(e) => {
-            updateFilters({ search: e.target.value });
-
-          }}
+          onChange={(e) =>
+            updateFilters({ search: e.target.value, page: 1 })
+          }
         />
 
         <select
           className="border border-gray-300 focus:outline-none px-3 py-2 rounded"
           value={filters.status}
-          onChange={(e) => {
-            updateFilters({ status: e.target.value });
-
-          }}
+          onChange={(e) =>
+            updateFilters({ status: e.target.value, page: 1 })
+          }
         >
           <option value="all">All Status</option>
           <option value="active">Active</option>
@@ -168,10 +162,9 @@ function Members() {
           placeholder="Min Due"
           className="border border-gray-300 focus:outline-none px-3 py-2 rounded"
           value={filters.dueMin}
-          onChange={(e) => {
-            updateFilters({ dueMin: e.target.value });
-
-          }}
+          onChange={(e) =>
+            updateFilters({ dueMin: e.target.value, page: 1 })
+          }
         />
 
         <input
@@ -179,10 +172,10 @@ function Members() {
           placeholder="Max Due"
           className="border border-gray-300 focus:outline-none px-3 py-2 rounded"
           value={filters.dueMax}
-          onChange={(e) => {
-            updateFilters({ dueMax: e.target.value });
-
-          }} />
+          onChange={(e) =>
+            updateFilters({ dueMax: e.target.value, page: 1 })
+          }
+        />
       </div>
 
       {/* Table */}
@@ -224,10 +217,7 @@ function Members() {
                     {member.subscription ? (
                       <>
                         <p className="font-bold">
-                          {
-                            member.subscription.subscriptionId
-                              ?.subscriptionName
-                          }
+                          {member.subscription.subscriptionId?.subscriptionName}
                         </p>
                         <p className="text-sm text-gray-500">
                           {member.status}
@@ -247,7 +237,7 @@ function Members() {
                   </td>
 
                   <td className="py-3 px-4 text-red-500 font-bold">
-                    ₹ {member.dueAmount || "-"}
+                    ₹ {member.dueAmount || "0"}
                   </td>
 
                   <td className="py-3 px-4 text-center">
@@ -265,79 +255,75 @@ function Members() {
             )}
           </tbody>
         </table>
+        {/* Pagination */}
+{pagination?.totalPages > 1 && (
+  <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    {/* Page info */}
+    <p className="text-sm text-gray-600 text-center sm:text-left">
+      Page {pagination.page} of {pagination.totalPages}
+    </p>
+
+    {/* Controls */}
+    <div className="flex items-center justify-center gap-2 flex-wrap">
+      {/* Prev */}
+      <Button
+        size="sm"
+        variant="outline"
+        text="Prev"
+        disabled={loading || pagination.page === 1}
+        onClick={() =>
+          setPagination((p) => ({ ...p, page: p.page - 1 }))
+        }
+      />
+
+      {/* Page numbers (desktop only) */}
+      <div className="hidden sm:flex gap-1">
+        {Array.from({ length: pagination.totalPages }).map((_, i) => (
+          <button
+            key={i}
+            onClick={() =>
+              setPagination((p) => ({ ...p, page: i + 1 }))
+            }
+            className={`px-3 py-1 border rounded text-sm ${
+              pagination.page === i + 1
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white hover:bg-gray-100"
+            }`}
+          >
+            {i + 1}
+          </button>
+        ))}
       </div>
 
-      {/* ✅ Assign Subscription Modal */} {showModal &&
-        (<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm">
-            <h3 className="text-lg font-semibold mb-4"> Assign Subscription </h3>
-            <select className="w-full border border-gray-300 focus:outline-none px-3 py-2 rounded mb-4" value={subscriptionId} onChange={(e) => setSubscriptionId(e.target.value)} >
-              <option value="">Select Subscription</option>
-              {subscriptions.map((sub) => (<option key={sub._id} value={sub._id}> {sub.subscriptionName} </option>))}
-            </select>
-            <div className="flex justify-end gap-2"> <Button variant="outline" size="sm" text="Cancel" onClick={() => setShowModal(false)} />
+      {/* Next */}
+      <Button
+        size="sm"
+        variant="outline"
+        text="Next"
+        disabled={
+          loading || pagination.page === pagination.totalPages
+        }
+        onClick={() =>
+          setPagination((p) => ({ ...p, page: p.page + 1 }))
+        }
+      />
+    </div>
+  </div>
+)}
+
+      </div>
+      {showModal && (<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+       <div className="bg-white rounded-lg p-6 w-full max-w-sm"> 
+        <h3 className="text-lg font-semibold mb-4"> Assign Subscription </h3> 
+        <select className="w-full border border-gray-300 focus:outline-none px-3 py-2 rounded mb-4" value={subscriptionId} onChange={(e) => setSubscriptionId(e.target.value)} >
+           <option value="">Select Subscription</option> {subscriptions.map((sub) => (<option key={sub._id} value={sub._id}> {sub.subscriptionName} </option>))} 
+           </select> 
+           <div className="flex justify-end gap-2">
+             <Button variant="outline" size="sm" text="Cancel" onClick={() => setShowModal(false)} /> 
               <Button variant="primary" size="sm" text={assigning ? "Assigning..." : "Assign"} disabled={assigning} onClick={assignSubscription} />
-            </div>
-          </div>
-        </div>
-        )}
-
-      {/* Pagination */}
-      {pagination?.totalPages > 1 && (
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-
-          {/* Page info */}
-          <p className="text-sm text-gray-600 text-center sm:text-left">
-            Page {pagination.page} of {pagination.totalPages}
-          </p>
-
-          {/* Controls */}
-          <div className="flex items-center justify-center gap-2 flex-wrap">
-
-            {/* Prev */}
-            <Button
-              size="sm"
-              variant="outline"
-              text="Prev"
-              disabled={loading || pagination.page === 1}
-              onClick={() =>
-                setPagination((p) => ({ ...p, page: p.page - 1 }))
-              }
-            />
-
-            {/* Page numbers (desktop only) */}
-            <div className="hidden sm:flex gap-1">
-              {Array.from({ length: pagination.totalPages }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() =>
-                    setPagination((p) => ({ ...p, page: i + 1 }))
-                  }
-                  className={`px-3 py-1 border rounded text-sm ${pagination.page === i + 1
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white hover:bg-gray-100"
-                    }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-
-            {/* Next */}
-            <Button
-              size="sm"
-              variant="outline"
-              text="Next"
-              disabled={
-                loading || pagination.page === pagination.totalPages
-              } onClick={() =>
-                setPagination((p) => ({ ...p, page: p.page + 1 }))
-              }
-            />
-          </div>
-        </div>
-      )}
-
+               </div>
+                </div> 
+                </div> )}
     </div>
   );
 }

@@ -10,12 +10,16 @@ export const MemberProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  /* ================= Filters ================= */
   const [filters, setFilters] = useState({
     search: "",
     status: "all",
     dueMin: "",
     dueMax: "",
   });
+
+  /* 🔥 Debounced filters */
+  const [debouncedFilters, setDebouncedFilters] = useState(filters);
 
   const [pagination, setPagination] = useState({
     page: 1,
@@ -24,13 +28,25 @@ export const MemberProvider = ({ children }) => {
     totalMembers: 0,
   });
 
-  // Use ref to store the current AbortController
+  /* Abort controller */
   const fetchController = useRef(null);
 
-  // ================= FETCH MEMBERS =================
-  const fetchMembers = async (filtersParam = filters, pageParam = pagination.page) => {
-    // Cancel previous request if exists
+  /* ================= DEBOUNCE FILTERS ================= */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilters(filters);
+    }, 500); // ⏱️ debounce delay
+
+    return () => clearTimeout(timer);
+  }, [filters.search, filters.status, filters.dueMin, filters.dueMax]);
+
+  /* ================= FETCH MEMBERS ================= */
+  const fetchMembers = async (
+    filtersParam = debouncedFilters,
+    pageParam = pagination.page
+  ) => {
     if (fetchController.current) fetchController.current.abort();
+
     fetchController.current = new AbortController();
     const signal = fetchController.current.signal;
 
@@ -47,16 +63,21 @@ export const MemberProvider = ({ children }) => {
         limit: pagination.limit,
       };
 
-      const res = await axiosInstance.get("/members/client/search", { params, signal });
+      const res = await axiosInstance.get("/members/client", {
+        params,
+        signal,
+      });
 
       setMembers(res.data.data);
 
-      // Clamp page in case it went out of bounds
-      const newPage = Math.min(Math.max(res.data.page, 1), res.data.totalPages || 1);
+      const safePage = Math.min(
+        Math.max(res.data.page || 1, 1),
+        res.data.totalPages || 1
+      );
 
       setPagination((prev) => ({
         ...prev,
-        page: newPage,
+        page: safePage,
         totalPages: res.data.totalPages,
         totalMembers: res.data.totalMembers,
       }));
@@ -69,18 +90,37 @@ export const MemberProvider = ({ children }) => {
     }
   };
 
-  // ================= AUTO REFRESH =================
+  /* ================= AUTO FETCH ================= */
   useEffect(() => {
-    fetchMembers(filters, pagination.page);
-  }, [filters, pagination.page]);
+    fetchMembers(debouncedFilters, pagination.page);
+  }, [debouncedFilters, pagination.page]);
 
-  // ================= UPDATE FILTERS =================
+  /* ================= UPDATE FILTERS ================= */
   const updateFilters = (newFilters) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
-    setPagination((prev) => ({ ...prev, page: 1 })); // reset page to 1
+    setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
-  // ================= FETCH SINGLE MEMBER =================
+  // ================= SEARCH MEMBERS (LOCAL USE) =================
+const searchMembers = async (search) => {
+  try {
+    const res = await axiosInstance.get("/members/client", {
+      params: {
+        search,
+        page: 1,
+        limit: 10,
+      },
+    });
+
+    return res.data.data;
+  } catch (err) {
+    toast.error("Failed to search members");
+    return [];
+  }
+};
+
+
+  /* ================= FETCH SINGLE ================= */
   const fetchMemberById = async (id) => {
     try {
       setLoading(true);
@@ -95,20 +135,17 @@ export const MemberProvider = ({ children }) => {
     }
   };
 
-  // ================= CREATE MEMBER =================
+  /* ================= CREATE ================= */
   const createMember = async (data) => {
     try {
       setLoading(true);
       const res = await axiosInstance.post("/members", data);
       toast.success(res.data.message || "Member created");
 
-      // Fetch members with latest filters and current page
-      fetchMembers(filters, pagination.page);
-
+      fetchMembers(debouncedFilters, 1);
       return res.data;
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to create member";
-      setError(msg);
       toast.error(msg);
       throw err;
     } finally {
@@ -116,14 +153,14 @@ export const MemberProvider = ({ children }) => {
     }
   };
 
-  // ================= UPDATE MEMBER =================
+  /* ================= UPDATE ================= */
   const updateMember = async (id, data) => {
     try {
       setLoading(true);
       const res = await axiosInstance.put(`/members/${id}`, data);
       toast.success("Member updated");
 
-      fetchMembers(filters, pagination.page);
+      fetchMembers(debouncedFilters, pagination.page);
       return res.data;
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update member");
@@ -133,14 +170,14 @@ export const MemberProvider = ({ children }) => {
     }
   };
 
-  // ================= DELETE MEMBER =================
+  /* ================= DELETE ================= */
   const deleteMember = async (id) => {
     try {
       setLoading(true);
       await axiosInstance.delete(`/members/${id}`);
       toast.success("Member deleted");
 
-      fetchMembers(filters, pagination.page);
+      fetchMembers(debouncedFilters, pagination.page);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to delete member");
     } finally {
@@ -148,12 +185,12 @@ export const MemberProvider = ({ children }) => {
     }
   };
 
-  // ================= TOGGLE ACTIVE =================
+  /* ================= TOGGLE ACTIVE ================= */
   const toggleActive = async (memberId) => {
     try {
       await axiosInstance.patch(`/members/${memberId}/toggle-active`);
       fetchMemberById(memberId);
-    } catch (err) {
+    } catch {
       toast.error("Failed to update status");
     }
   };
@@ -176,6 +213,7 @@ export const MemberProvider = ({ children }) => {
         deleteMember,
         toggleActive,
         setMembers,
+        searchMembers
       }}
     >
       {children}

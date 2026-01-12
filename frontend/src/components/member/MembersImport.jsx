@@ -6,6 +6,7 @@ import { Trash } from "lucide-react";
 import CommonHeader from "../common/CommonHeader";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { useMembers } from "../../context/MemberContext";
 
 
 function MembersImport() {
@@ -13,6 +14,11 @@ function MembersImport() {
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const navigate=useNavigate()
+
+    const {
+      fetchMembers
+
+    } = useMembers();
 
    
 
@@ -52,6 +58,7 @@ function MembersImport() {
       setImporting(true);
       await axiosInstance.post("/excel/import", { members });
       toast.success("Members imported successfully ✅");
+      fetchMembers()
       navigate('/members')
       setMembers([]);
     } catch (err) {

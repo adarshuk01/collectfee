@@ -5,14 +5,21 @@ import Button from "../components/common/Button";
 import CommonHeader from "../components/common/CommonHeader";
 import toast from "react-hot-toast";
 
+const PaymentCardSkeleton = () => (
+  <div className="border border-gray-300 rounded p-3 animate-pulse space-y-2">
+    <div className="h-4 bg-gray-300 rounded w-1/3" />
+    <div className="h-3 bg-gray-200 rounded w-2/3" />
+    <div className="h-4 bg-gray-300 rounded w-1/4" />
+  </div>
+);
+
+
 function QuickPay() {
   const {
-    members,
-    fetchMembers,
-    updateFilters,
+   searchMembers
   } = useMembers();
 
-  const { payments, fetchPendingPayments, quickPay } = usePayments();
+  const { payments, fetchPendingPayments, quickPay,paymentsLoading } = usePayments();
 
   const [selectedMember, setSelectedMember] = useState("");
   const [selectedPayment, setSelectedPayment] = useState(null);
@@ -27,15 +34,22 @@ function QuickPay() {
   const [showMemberList, setShowMemberList] = useState(false);
 
 
-  /* ================= DEBOUNCED SEARCH ================= */
-  useEffect(() => {
-    const delay = setTimeout(() => {
-      updateFilters({ search: memberSearch });
-      fetchMembers({ page: 1 });
-    }, 400);
+const [localMembers, setLocalMembers] = useState([]);
 
-    return () => clearTimeout(delay);
-  }, [memberSearch]);
+useEffect(() => {
+  if (!memberSearch) {
+    setLocalMembers([]);
+    return;
+  }
+
+  const delay = setTimeout(async () => {
+    const results = await searchMembers(memberSearch);
+    setLocalMembers(results);
+  }, 400);
+
+  return () => clearTimeout(delay);
+}, [memberSearch]);
+
 
 
   const formatDate = (date) => {
@@ -47,14 +61,13 @@ function QuickPay() {
     });
   };
 
-  // Fetch payments when member selected
   useEffect(() => {
-    if (selectedMember) {
-      fetchPendingPayments(selectedMember);
-      setSelectedPayment(null);
-      setSelectedFees({});
-    }
-  }, [selectedMember]);
+  if (selectedMember) {
+    setSelectedPayment(null);
+    setSelectedFees({});
+    fetchPendingPayments(selectedMember);
+  }
+}, [selectedMember]);
 
   console.log('selectedPayment', selectedPayment);
 
@@ -163,7 +176,7 @@ function QuickPay() {
 
         {showMemberList && (
           <div className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-60 overflow-y-auto">
-            {members.map((m) => (
+            {localMembers.map((m) => (
               <div onClick={() => {
                 setSelectedMember(m._id);
                 setMemberSearch(m.fullName);
@@ -174,7 +187,7 @@ function QuickPay() {
               </div>
             ))}
 
-            {members.filter((m) =>
+            {localMembers.filter((m) =>
               m.fullName.toLowerCase().includes(memberSearch.toLowerCase())
             ).length === 0 && (
                 <p className="px-3 py-2 text-gray-500">No members found</p>
@@ -183,36 +196,43 @@ function QuickPay() {
         )}
       </div>
 
-      {/* 📄 Pending Payments */}
-      {selectedMember && (
-        <div className="space-y-2">
-          <h3 className="font-semibold">Pending Payments</h3>
+     {/* 📄 Pending Payments */}
+{selectedMember && (
+  <div className="space-y-2">
+    <h3 className="font-semibold">Pending Payments</h3>
 
-          {payments.length === 0 ? (
-            <p className="text-gray-500">No Due or Partial Payments</p>
-          ) : (
-            payments.map((p) => {
-              const due = p.amount - p.paidAmount;
-              return (
-                <div
-                  key={p._id}
-                  onClick={() => handleSelectPayment(p)}
-                  className={`border p-3 rounded cursor-pointer ${selectedPayment?._id === p._id
-                      ? "bg-blue-100 border-blue-500"
-                      : "border-gray-300"
-                    }`}
-                >
-                  <h3>Bill Date: {formatDate(p?.dueDate)}</h3>
-                  <p className="text-sm">
-                    Total: ₹{p.amount} | Paid: ₹{p.paidAmount}
-                  </p>
-                  <p className="text-red-600 font-semibold">Due: ₹{due}</p>
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
+    {paymentsLoading ? (
+      <>
+        <PaymentCardSkeleton />
+      
+      </>
+    ) : payments.length === 0 ? (
+      <p className="text-gray-500">No Due or Partial Payments</p>
+    ) : (
+      payments.map((p) => {
+        const due = p.amount - p.paidAmount;
+        return (
+          <div
+            key={p._id}
+            onClick={() => handleSelectPayment(p)}
+            className={`border p-3 rounded cursor-pointer ${
+              selectedPayment?._id === p._id
+                ? "bg-blue-100 border-blue-500"
+                : "border-gray-300"
+            }`}
+          >
+            <h3>Bill Date: {formatDate(p?.dueDate)}</h3>
+            <p className="text-sm">
+              Total: ₹{p.amount} | Paid: ₹{p.paidAmount}
+            </p>
+            <p className="text-red-600 font-semibold">Due: ₹{due}</p>
+          </div>
+        );
+      })
+    )}
+  </div>
+)}
+
 
       {/* 💰 Fee Table */}
       {selectedPayment && (
