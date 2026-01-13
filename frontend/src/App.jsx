@@ -34,6 +34,9 @@ import Groups from './pages/Groups'
 import GroupForm from './components/group/GroupForm'
 import GroupDetails from './components/group/GroupDetails'
 import MembersImport from './components/member/MembersImport'
+import GroupWiseFeeReport from './components/reports/GroupWiseFeeReport'
+import Report from './pages/Reports'
+import SingleMemberFeeReport from './components/reports/SingleMemberFeeReport'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -77,13 +80,18 @@ function App() {
           <Route path="/groups" element={<Groups/>} />
           <Route path="/groups/add" element={<GroupForm/>} />
            <Route path="/groups/:id" element={<GroupDetails/>} />
-          <Route path="/reports" element={<></>} />
+          <Route path="/reports" element={<Report/>} />
            <Route path="/reports/monthly" element={<MonthlyReport/>} />
           <Route path="/member/transactions/:memberId" element={<MemberTransaction/>} />
+
+          <Route path="/reports/fee" element={<GroupWiseFeeReport/>} />
+                    <Route path="/*" element={<>Not Found</>} />
 
 
 
           <Route path="/receipt/:id" element={<PaymentReceipt />} />
+                    <Route path='/singlemember/:id' element={<SingleMemberFeeReport />} />
+
 
         </Route>
 

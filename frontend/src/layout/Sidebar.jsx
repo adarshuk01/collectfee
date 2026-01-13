@@ -28,7 +28,8 @@ function Sidebar() {
   return (
     <div className="hidden md:flex fixed left-0 top-0 h-full w-60 bg-white shadow-md border-r border-gray-200 p-6 flex-col gap-6">
 
-      <h1 className="text-xl font-bold mb-4">FeEzy</h1>
+      {/* <h1 className="text-3xl text-center font-bold mb-4">Fe<span className="text-primary">Ezy</span> </h1> */}
+      <img className="mx-auto" width={100} src="public/logos/mylogo.png" alt="" />
 
       <nav className="flex flex-col gap-3">
         {navItems.map((item) => {

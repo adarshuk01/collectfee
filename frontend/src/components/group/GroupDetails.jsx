@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import CommonHeader from "../common/CommonHeader";
 import { useBatch } from "../../context/BatchContext";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import Button from "../common/Button";
 import { UserPlus, X } from "lucide-react";
 
@@ -124,7 +124,7 @@ function GroupDetails() {
         {groupSummary?.membersSummary?.length > 0 ? (
           groupSummary.membersSummary.map((m) => (
             <tr key={m.memberId} className="border-b border-gray-300">
-              <td className="py-2 px-4 border border-gray-300 "> <span className="capitalize">{m.fullName}</span> <br /><span className="text-gray-500">{m.email}</span></td>
+              <td className="py-2 px-4 border border-gray-300 "> <Link to={`/member/${m.memberId}`} className="capitalize text-blue-600 hover:underline">{m.fullName}</Link> <br /><span className="text-gray-500">{m.email}</span></td>
               <td className="py-2 px-4 border border-gray-300 text-green-600 font-medium">
                 ₹{m.totalPaidAmount}
               </td>

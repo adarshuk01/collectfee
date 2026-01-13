@@ -90,6 +90,10 @@ export const MemberProvider = ({ children }) => {
     }
   };
 
+  useEffect(()=>{
+  fetchMembers()
+  },[])
+
   /* ================= AUTO FETCH ================= */
   useEffect(() => {
     fetchMembers(debouncedFilters, pagination.page);

@@ -31,6 +31,8 @@ app.use("/api/stats", require("./routes/statsRoutes"));
 app.use("/api/settings", require("./routes/settingsRoutes"));
 app.use("/api/batch", require("./routes/batchRoutes"));
 app.use("/api/excel", require("./routes/memberBulkRoutes"));
+app.use("/api/report", require("./routes/reportRoutes"));
+
 
 
 
