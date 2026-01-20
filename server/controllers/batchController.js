@@ -187,6 +187,8 @@ exports.getMembersByBatch = async (req, res) => {
   try {
     const { batchId } = req.params;
     const clientId = req.user.id;
+    console.log(batchId);
+    
 
     // Find members assigned to this batch
     const members = await Member.find({

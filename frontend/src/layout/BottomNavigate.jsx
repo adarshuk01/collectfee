@@ -24,10 +24,12 @@ function MobileBottomNav() {
     { name: "Subscription", path: "/subscription", icon: MdOutlineSubscriptions, filledIcon: MdSubscriptions },
     // MIDDLE BUTTON WILL BE PLACED HERE
     { name: "Members", path: "/members", icon: HiOutlineUsers, filledIcon: HiUsers },
+     { name: "Groups", path: "/groups", icon: HiOutlineUserGroup  , filledIcon: HiUserGroup },
+        { name: "Attendance", path: "/attendance", icon: IoCalendarOutline, filledIcon:IoCalendar  },
     { name: "Reports", path: "/reports", icon: HiOutlineDocumentReport , filledIcon: BiSolidReport },
-    { name: "Groups", path: "/groups", icon: HiOutlineUserGroup  , filledIcon: HiUserGroup },
+   
 
-    { name: "Settings", path: "/settings", icon: IoSettingsOutline, filledIcon:IoSettings  },
+
   ];
 
   return (

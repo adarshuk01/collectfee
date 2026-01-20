@@ -9,6 +9,7 @@ import { MemberProvider } from './context/MemberContext.jsx'
 import { PaymentProvider } from './context/PaymentContext.jsx'
 import { BatchProvider } from './context/BatchContext.jsx'
 import "./i18n";
+import { AttendanceProvider } from './context/AttendanceContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -18,7 +19,9 @@ createRoot(document.getElementById('root')).render(
           <MemberProvider>
             <PaymentProvider>
               <BatchProvider>
+                <AttendanceProvider>
                 <App />
+                </AttendanceProvider>
               </BatchProvider>
             </PaymentProvider>
           </MemberProvider>

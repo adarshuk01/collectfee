@@ -36,6 +36,8 @@ app.use("/api/settings", require("./routes/settingsRoutes"));
 app.use("/api/batch", require("./routes/batchRoutes"));
 app.use("/api/excel", require("./routes/memberBulkRoutes"));
 app.use("/api/report", require("./routes/reportRoutes"));
+app.use("/api/attendance", require("./routes/attendanceRoutes"));
+
 
 app.listen(process.env.PORT || 5000, () =>
   console.log(`Server running on ${process.env.PORT || 5000}`)

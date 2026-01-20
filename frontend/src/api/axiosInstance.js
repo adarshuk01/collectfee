@@ -4,7 +4,7 @@ const axiosInstance = axios.create({
   baseURL: "https://collectfee.vercel.app/api",
 });
 
-// url:https://collectfee.onrender.com
+// url:https://collectfee.onrender.com,https://collectfee.vercel.app/api
 // Automatically attach token to headers
 axiosInstance.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");

@@ -142,6 +142,28 @@ export const AuthProvider = ({ children }) => {
     navigate("/auth/signin");
   };
 
+  const toggle2FA = async () => {
+  const loadingToast = toast.loading("Updating 2FA...");
+
+  try {
+    const res = await axiosInstance.put("/auth/2fa/toggle");
+
+    toast.dismiss(loadingToast);
+    toast.success(res.data.msg);
+
+    // Update user state locally
+    setUser((prev) => ({
+      ...prev,
+      is2FA: res.data.is2FA,
+    }));
+
+    return res.data;
+  } catch (error) {
+    toast.dismiss(loadingToast);
+    toast.error(error?.response?.data?.msg || "Failed to update 2FA status");
+  }
+};
+
   return (
     <AuthContext.Provider
       value={{
@@ -152,6 +174,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated: !!user,
         signup,
         verifySignupOtp,
+        toggle2FA,
         login,
         verifyLoginOtp,
         logout,

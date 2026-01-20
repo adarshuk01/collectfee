@@ -2,6 +2,8 @@ import React from "react";
 import { IoLocationSharp } from "react-icons/io5";
 import { Bell ,Search } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { BsGear } from "react-icons/bs";
+import { Link } from "react-router-dom";
 
 function TopNavbar() {
   const {user,logout}=useAuth()
@@ -34,10 +36,10 @@ function TopNavbar() {
       <div className="flex items-center gap-4">
 
         {/* Empty Circle */}
-        <button className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center">
-                      <Search size={20} className="text-gray-700" />
+        <Link to={'/settings'} className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center">
+                      <BsGear size={20} className="text-gray-700" />
 
-        </button>
+        </Link>
 
         {/* Notification Bell */}
         <button className="relative w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center">
