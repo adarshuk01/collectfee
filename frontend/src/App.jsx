@@ -37,6 +37,7 @@ import MembersImport from './components/member/MembersImport'
 import GroupWiseFeeReport from './components/reports/GroupWiseFeeReport'
 import Report from './pages/Reports'
 import SingleMemberFeeReport from './components/reports/SingleMemberFeeReport'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -52,6 +53,7 @@ function App() {
           <Route path='forgot-password' element={<ForgotPass />} />
           <Route path='verify-otp' element={<Otp />} />
         </Route>
+        <Route element={<ProtectedRoute/>}>
         <Route path='/' element={<Layout />}>
           <Route path='' element={<Dashboard />} />
           <Route path='booking' element={<>Booking</>} />
@@ -77,22 +79,23 @@ function App() {
           <Route path="/member/payments/:memberId" element={<MemberPayments />} />
 
           <Route path="/quickpay" element={<QuickPay />} />
-          <Route path="/groups" element={<Groups/>} />
-          <Route path="/groups/add" element={<GroupForm/>} />
-           <Route path="/groups/:id" element={<GroupDetails/>} />
-          <Route path="/reports" element={<Report/>} />
-           <Route path="/reports/monthly" element={<MonthlyReport/>} />
-          <Route path="/member/transactions/:memberId" element={<MemberTransaction/>} />
+          <Route path="/groups" element={<Groups />} />
+          <Route path="/groups/add" element={<GroupForm />} />
+          <Route path="/groups/:id" element={<GroupDetails />} />
+          <Route path="/reports" element={<Report />} />
+          <Route path="/reports/monthly" element={<MonthlyReport />} />
+          <Route path="/member/transactions/:memberId" element={<MemberTransaction />} />
 
-          <Route path="/reports/fee" element={<GroupWiseFeeReport/>} />
-                    <Route path="/*" element={<>Not Found</>} />
+          <Route path="/reports/fee" element={<GroupWiseFeeReport />} />
+          <Route path="/*" element={<>Not Found</>} />
 
 
 
           <Route path="/receipt/:id" element={<PaymentReceipt />} />
-                    <Route path='/singlemember/:id' element={<SingleMemberFeeReport />} />
+          <Route path='/singlemember/:id' element={<SingleMemberFeeReport />} />
 
 
+        </Route>
         </Route>
 
       </Routes>

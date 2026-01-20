@@ -90,9 +90,7 @@ export const MemberProvider = ({ children }) => {
     }
   };
 
-  useEffect(()=>{
-  fetchMembers()
-  },[])
+
 
   /* ================= AUTO FETCH ================= */
   useEffect(() => {

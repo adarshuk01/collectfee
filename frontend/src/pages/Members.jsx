@@ -110,6 +110,11 @@ function Members() {
     }
   };
 
+  useEffect(() => {
+  fetchMembers();
+}, []);
+
+
   /* ================= Render ================= */
   return (
     <div>
@@ -180,7 +185,7 @@ function Members() {
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
+        <table className="min-w-full text-sm border border-gray-300">
           <thead>
             <tr className="bg-gray-100 border-b border-gray-300">
               <th className="py-3 px-4">Name</th>

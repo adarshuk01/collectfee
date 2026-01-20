@@ -11,7 +11,7 @@ function SignIn() {
     remember: false,
   });
 
-  const { login ,authLoading} = useAuth();
+  const { login, authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [errors, setErrors] = useState({});
@@ -51,15 +51,15 @@ function SignIn() {
       if (res.requires2FA) {
         navigate("/auth/verify-otp", {
           state: {
-            tempToken: res.tempToken,  // backend should return tempToken for login 2FA
+            tempToken: res.tempToken,
             email: form.email,
-            isLogin: true
+            isLogin: true,
           },
         });
       } else {
-        // 🔹 If login is successful without OTP
         navigate("/");
       }
+
     } catch (err) {
       console.error(err);
     }
@@ -68,7 +68,7 @@ function SignIn() {
   return (
     <div className="">
       <div className="p-6 space-y-6 w-full max-w- h-fit">
-        
+
         {/* Title */}
         <div className="text-center">
           <h2 className="text-3xl font-bold text-grey100">Let’s Sign You In</h2>
@@ -79,7 +79,7 @@ function SignIn() {
 
         {/* Form */}
         <form className="space-y-4" onSubmit={handleSubmit}>
-          
+
           <InputField
             label="Email Address"
             placeholder="Enter your email address"
