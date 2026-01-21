@@ -15,12 +15,8 @@ function addCycle(date, cycle) {
   return newDate;
 }
 
-module.exports = async function handler(req, res) {
-  // 🔒 Protect cron endpoint
-  if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
+// ---- The main function ----
+async function runRenewal() {
   await connectDB();
 
   const today = new Date();
@@ -91,9 +87,13 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    return res.status(200).json({ success: true });
+    console.log("✅ Renewal process completed");
+    return { success: true };
   } catch (error) {
     console.error("CRON ERROR:", error);
-    return res.status(500).json({ error: "Cron failed" });
+    return { success: false, error };
   }
-};
+}
+
+// Export the function
+module.exports = runRenewal;
