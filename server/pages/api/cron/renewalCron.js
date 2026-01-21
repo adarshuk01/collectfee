@@ -1,8 +1,8 @@
-const MemberSubscription = require("../models/memberSubscription");
-const MemberPayment = require("../models/MemberPayment");
-const SubscriptionPackage = require("../models/SubscriptionPackage");
-const Member = require("../models/Member");
-const connectDB = require("../config/db");
+const MemberSubscription = require("../../../models/memberSubscription");
+const MemberPayment = require("../../../models/MemberPayment");
+const SubscriptionPackage = require("../../../models/SubscriptionPackage");
+const Member = require("../../../models/Member");
+const connectDB = require("../../../config/db");
 
 // Helper to calculate next cycle
 function addCycle(date, cycle) {

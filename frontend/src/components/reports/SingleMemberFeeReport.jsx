@@ -6,14 +6,19 @@ import CommonHeader from "../common/CommonHeader";
 import axiosInstance from "../../api/axiosInstance";
 import { generateReportPDF } from "../../utils/reportPdf";
 
-
-/* ---------- Skeleton ---------- */
-const TableSkeleton = () => (
-  <div className="animate-pulse space-y-3">
-    {[...Array(4)].map((_, i) => (
-      <div key={i} className="h-8 bg-gray-200 rounded" />
+/* ---------- Table Row Skeleton ---------- */
+const TableRowSkeleton = ({ rows = 4 }) => (
+  <>
+    {[...Array(rows)].map((_, i) => (
+      <tr key={i} className="animate-pulse">
+        {[...Array(5)].map((_, j) => (
+          <td key={j} className="border border-gray-300 p-2">
+            <div className="h-4 bg-gray-200 rounded" />
+          </td>
+        ))}
+      </tr>
     ))}
-  </div>
+  </>
 );
 
 const SingleMemberFeeReport = () => {
@@ -31,11 +36,7 @@ const SingleMemberFeeReport = () => {
         setLoading(true);
         setError(null);
 
-        const res = await axiosInstance.get(
-          `/report/member-fee/${id}`
-        );
-        console.log(res.data);
-        
+        const res = await axiosInstance.get(`/report/member-fee/${id}`);
         setData(res.data);
       } catch (err) {
         setError(
@@ -49,125 +50,99 @@ const SingleMemberFeeReport = () => {
     fetchReport();
   }, [id]);
 
-  /* ---------- STATES ---------- */
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <CommonHeader title="Member Report" />
-        <TableSkeleton />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-2">
-        <CommonHeader title="Member Report" />
-        <p className="text-center text-red-600 font-semibold">
-          {error}
-        </p>
-      </div>
-    );
-  }
-
   const member = data?.member_summary;
   const payments = data?.transactions || [];
 
   const totalPaid = member?.total_paid || 0;
   const totalPending = member?.total_pending || 0;
 
+  /* ---------- Actions ---------- */
   const handleDownload = () => {
-  generateReportPDF({
-    title: "Single Member Fee Report",
-    fileName: `member-fee-report-${member?.member_id}.pdf`,
-    memberInfo: [
-      `Member Name: ${member?.member_name || "-"}`,
-      `Member ID: ${member?.member_id || "-"}`,
-      `Batch: ${member?.batch_id || "-"}`
-    ],
-    tableHead: [
-      "Date",
-      
-      "Payment Type",
-    
-      "Paid Amount",
-      "Pending Amount"
-    ],
-    tableBody: payments.map(p => [
-      p.date,
-      p.payment_type,
-  
-      p.paid_amount,
-      p.pending_amount
-    ])
-  });
-};
-
-const handlePrint = () => {
-  generateReportPDF({
-    title: "Single Member Fee Report",
-    autoPrint: true,
-    memberInfo: [
-      `Member Name: ${member?.member_name || "-"}`,
-      `Member ID: ${member?.member_id || "-"}`,
-      `Batch: ${member?.batch_id || "-"}`
-    ],
-    tableHead: [
-      "Date",
-      "Voucher No",
-      "Payment Type",
-      "Payment Mode",
-      "Paid Amount",
-      "Pending Amount"
-    ],
-    tableBody: payments.map(p => [
-      p.date,
-      "-",
-      p.payment_type,
-      p.payment_method,
-      p.paid_amount,
-      p.pending_amount
-    ])
-  });
-};
-
-const handleShare = async () => {
-  const blob = new Blob([], { type: "application/pdf" });
-
-  if (navigator.share) {
-    await navigator.share({
-      title: "Member Fee Report",
-      text: "Sharing member fee report"
+    generateReportPDF({
+      title: "Single Member Fee Report",
+      fileName: `member-fee-report-${member?.member_id}.pdf`,
+      memberInfo: [
+        `Member Name: ${member?.member_name || "-"}`,
+        `Member ID: ${member?.member_id || "-"}`,
+        `Batch: ${member?.batch_id || "-"}`
+      ],
+      tableHead: [
+        "Date",
+        "Payment Type",
+        "Paid Amount",
+        "Pending Amount"
+      ],
+      tableBody: payments.map(p => [
+        p.date,
+        p.payment_type,
+        p.paid_amount,
+        p.pending_amount
+      ])
     });
-  } else {
-    alert("Share not supported on this browser");
-  }
-};
+  };
 
+  const handlePrint = () => {
+    generateReportPDF({
+      title: "Single Member Fee Report",
+      autoPrint: true,
+      memberInfo: [
+        `Member Name: ${member?.member_name || "-"}`,
+        `Member ID: ${member?.member_id || "-"}`,
+        `Batch: ${member?.batch_id || "-"}`
+      ],
+      tableHead: [
+        "Date",
+        "Voucher No",
+        "Payment Type",
+        "Payment Mode",
+        "Paid Amount",
+        "Pending Amount"
+      ],
+      tableBody: payments.map(p => [
+        p.date,
+        "-",
+        p.payment_type,
+        p.payment_method,
+        p.paid_amount,
+        p.pending_amount
+      ])
+    });
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      await navigator.share({
+        title: "Member Fee Report",
+        text: "Sharing member fee report"
+      });
+    } else {
+      alert("Share not supported on this browser");
+    }
+  };
 
   return (
     <div className="space-y-2">
       <CommonHeader title="Member Report" />
 
+      {error && (
+        <p className="text-center text-red-600 font-semibold">
+          {error}
+        </p>
+      )}
+
       {/* Member Info */}
       <div className="mb-4 space-y-1">
-        <p>
-          <strong>Member Name:</strong> {member?.member_name || "-"}
-        </p>
-        <p>
-          <strong>Member ID:</strong> {member?.member_id || "-"}
-        </p>
-        <p>
-          <strong>Batch ID:</strong> {member?.batch_id || "-"}
-        </p>
+        <p><strong>Member Name:</strong> {member?.member_name || "-"}</p>
+        <p><strong>Member ID:</strong> {member?.member_id || "-"}</p>
+        <p><strong>Batch ID:</strong> {member?.batch_id || "-"}</p>
       </div>
 
       {/* Actions */}
-     <div className="flex justify-end gap-2">
-  <Button variant="outline" size="xs" icon={<Download />} onClick={handleDownload} />
-  <Button variant="outline" size="xs" icon={<Printer />} onClick={handlePrint} />
-  <Button variant="outline" size="xs" icon={<Share2 />} onClick={handleShare} />
-</div>
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" size="xs" icon={<Download />} onClick={handleDownload} />
+        <Button variant="outline" size="xs" icon={<Printer />} onClick={handlePrint} />
+        <Button variant="outline" size="xs" icon={<Share2 />} onClick={handleShare} />
+      </div>
 
       {/* Table */}
       <div className="overflow-x-auto">
@@ -183,10 +158,13 @@ const handleShare = async () => {
           </thead>
 
           <tbody>
-            {payments.length ? (
+            {loading ? (
+              <TableRowSkeleton rows={4} />
+            ) : payments.length ? (
               payments.map((p, index) => (
                 <tr key={index} className="text-center text-nowrap">
                   <td className="border border-gray-300 p-2">{p.date}</td>
+
                   <td className="border border-gray-300 p-2">
                     {p.payment_type
                       .split(",")
@@ -194,10 +172,15 @@ const handleShare = async () => {
                         <div key={i}>{t.trim()}</div>
                       ))}
                   </td>
-                  <td className="border border-gray-300 p-2"><Link className="text-primary underline">view</Link></td>
+
+                  <td className="border border-gray-300 p-2">
+                    <Link className="text-primary underline">view</Link>
+                  </td>
+
                   <td className="border border-gray-300 p-2">
                     {Number(p.paid_amount).toLocaleString()}
                   </td>
+
                   <td className="border border-gray-300 p-2">
                     {Number(p.pending_amount).toLocaleString()}
                   </td>
@@ -205,7 +188,7 @@ const handleShare = async () => {
               ))
             ) : (
               <tr>
-                <td colSpan="6" className="text-center p-4">
+                <td colSpan="5" className="text-center p-4">
                   No transactions found
                 </td>
               </tr>
