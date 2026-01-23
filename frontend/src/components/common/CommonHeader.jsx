@@ -6,7 +6,7 @@ const CommonHeader = ({ title = "Header" }) => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex items-center gap-3 mb-4 py-3 border-b border-gray-200">
+    <div className="flex sticky top-0 bg-white z-50 items-center gap-3 mb-4 py-3 border-b border-gray-200">
       {/* Back Button */}
       <button onClick={() => navigate(-1)} className="text-gray-800">
         <ArrowLeft size={24} />

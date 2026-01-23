@@ -198,8 +198,8 @@ const SingleMemberFeeReport = () => {
       </div>
 
       {/* Totals */}
-      <div className="grid grid-cols-2 mt-6 border">
-        <div className="p-4 text-center border-r font-semibold text-green-600">
+      <div className="grid grid-cols-1 lg:grid-cols-2 mt-6 border border-gray-300">
+        <div className="p-4 text-center border-b border-gray-300 lg:border-r font-semibold text-green-600">
           Total Paid Amount: {totalPaid.toLocaleString()} INR
         </div>
         <div className="p-4 text-center font-semibold text-red-600">

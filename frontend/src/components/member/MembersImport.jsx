@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axiosInstance from "../../api/axiosInstance";
 import { useSubscription } from "../../context/SubscriptionContext";
 import Button from "../common/Button";
-import { Trash } from "lucide-react";
+import { Download, Trash } from "lucide-react";
 import CommonHeader from "../common/CommonHeader";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -73,8 +73,22 @@ function MembersImport() {
       <h2 className="text-xl font-semibold mb-4"></h2>
       <CommonHeader title="Bulk Import Members" />
 
+      <a
+  href="/excel/sample-members.xlsx"
+  download
+  className="
+    inline-flex items-center gap-2
+    px-4 py-2 text-sm uppercase
+    bg-primary text-white rounded-md
+    hover:bg-blue-700
+  "
+>
+  <Download size={16} className="shrink-0" />
+  <span>Download Sample Excel</span>
+</a>
+
       {/* ✅ Excel Upload */}
-      <div className="mb-4">
+      <div className="mb-4 mt-4">
         <input
           type="file"
           accept=".xls,.xlsx"
