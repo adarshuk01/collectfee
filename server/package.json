@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/genai": "^1.38.0",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^1.41.3",
@@ -23,6 +24,7 @@
     "multer-storage-cloudinary": "^4.0.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.10",
+    "openai": "^6.17.0",
     "pdfkit": "^0.17.2",
     "qrcode": "^1.5.4",
     "resend": "^6.5.2",

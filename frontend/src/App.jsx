@@ -39,6 +39,7 @@ import Report from './pages/Reports'
 import SingleMemberFeeReport from './components/reports/SingleMemberFeeReport'
 import ProtectedRoute from './components/ProtectedRoute'
 import Attendance from './pages/Attendance'
+import ChatPage from './pages/ChatPage'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -99,6 +100,8 @@ function App() {
 
 
         </Route>
+                  <Route path="/chat" element={<ChatPage />} />
+
         </Route>
 
       </Routes>

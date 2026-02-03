@@ -61,6 +61,8 @@ app.use("/api/batch", require("./routes/batchRoutes"));
 app.use("/api/excel", require("./routes/memberBulkRoutes"));
 app.use("/api/report", require("./routes/reportRoutes"));
 app.use("/api/attendance", require("./routes/attendanceRoutes"));
+app.use("/api/ai", require("./routes/chatRoutes"));
+
 
 /* ----------------- Start Server ----------------- */
 const PORT = process.env.PORT || 5000;

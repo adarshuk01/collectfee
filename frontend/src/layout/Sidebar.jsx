@@ -11,6 +11,7 @@ import {
 import { MdOutlineSubscriptions, MdSubscriptions, MdPayments } from "react-icons/md";
 import { HiCalendar, HiOutlineCalendar, HiOutlineDocumentReport, HiOutlineUserGroup, HiOutlineUsers, HiUserGroup, HiUsers } from "react-icons/hi";
 import { BiSolidReport } from "react-icons/bi";
+import { RiRobot2Fill, RiRobot2Line } from "react-icons/ri";
 
 function Sidebar() {
   const navItems = [
@@ -19,12 +20,14 @@ function Sidebar() {
     { name: "Members", path: "/members", icon: HiOutlineUsers, filledIcon: HiUsers },
     { name: "Quick Pay", path: "/quickpay", icon: MdPayments, filledIcon: MdPayments },
 
-        { name: "Groups", path: "/groups", icon: HiOutlineUserGroup, filledIcon: HiUserGroup },
-                { name: "Attendance", path: "/attendance", icon: HiOutlineCalendar, filledIcon: HiCalendar },
+    { name: "Groups", path: "/groups", icon: HiOutlineUserGroup, filledIcon: HiUserGroup },
+    { name: "Attendance", path: "/attendance", icon: HiOutlineCalendar, filledIcon: HiCalendar },
+    { name: "Ai Chat", path: "/chat", icon: RiRobot2Line, filledIcon: RiRobot2Fill },
 
-  { name: "Reports", path: "/reports", icon: HiOutlineDocumentReport, filledIcon: BiSolidReport },
+
+    { name: "Reports", path: "/reports", icon: HiOutlineDocumentReport, filledIcon: BiSolidReport },
     { name: "Settings", path: "/settings", icon: IoSettingsOutline, filledIcon: IoSettings },
-    
+
 
   ];
 

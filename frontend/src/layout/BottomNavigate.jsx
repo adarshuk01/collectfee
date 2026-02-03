@@ -17,6 +17,7 @@ import { HiOutlineDocumentReport, HiOutlineUserGroup, HiOutlineUsers, HiUserGrou
 import { MdPayments } from "react-icons/md"; // Quick Pay icon
 import { BiSolidReport } from "react-icons/bi";
 import { AiFillThunderbolt } from "react-icons/ai";
+import { RiRobot2Fill, RiRobot2Line } from "react-icons/ri";
 
 function MobileBottomNav() {
   const navItems = [
@@ -26,6 +27,7 @@ function MobileBottomNav() {
     { name: "Members", path: "/members", icon: HiOutlineUsers, filledIcon: HiUsers },
      { name: "Groups", path: "/groups", icon: HiOutlineUserGroup  , filledIcon: HiUserGroup },
         { name: "Attendance", path: "/attendance", icon: IoCalendarOutline, filledIcon:IoCalendar  },
+
     { name: "Reports", path: "/reports", icon: HiOutlineDocumentReport , filledIcon: BiSolidReport },
    
 
@@ -71,6 +73,8 @@ function MobileBottomNav() {
           Quick Pay
           
         </NavLink>
+
+         
 
         {/* RIGHT TWO NAV ITEMS */}
         {navItems.slice(2).map((item) => {
