@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: "https://collectfee.vercel.app/api",
 });
 
 // url:https://collectfee.onrender.com,https://collectfee.vercel.app/api
