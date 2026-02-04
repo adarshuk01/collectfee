@@ -5,6 +5,8 @@ const chatWithBot = async (req, res) => {
   try {
     const { message } = req.body;
     const clientId = req.user.id; // 🔥 logged-in user
+    console.log(message);
+    
 
     const intentData = await getIntentFromMessage(message);
     const data = await handleIntent(intentData, clientId);

@@ -6,15 +6,23 @@ const openai = new OpenAI({
 });
 
 const getIntentFromMessage = async (message) => {
-  const prompt = `
+ const prompt = `
 You are an intent classifier for a fee management system.
 
 Allowed intents:
 - TOTAL_COLLECTION
-- EXPIRING_SUBSCRIPTIONS
+- EXPIRING_SUBSCRIPTIONS   (members whose subscription will expire soon)
+- EXPIRED_MEMBERS          (members whose subscription is already expired)
 - PENDING_FEES
 - INACTIVE_MEMBERS
 - SEND_REMINDER
+
+Rules:
+- If the user asks for "expired members", "already expired", "subscription expired",
+  return intent EXPIRED_MEMBERS.
+- If the user asks for "expiring", "about to expire", "expiring in X days",
+  return intent EXPIRING_SUBSCRIPTIONS and extract days.
+- Do NOT confuse expired with expiring.
 
 If applicable, also extract:
 - month (1-12)
@@ -32,6 +40,7 @@ User message:
 Return ONLY valid JSON.
 `;
 
+
   try {
     const response = await openai.chat.completions.create({
       model: "openai/gpt-oss-120b", // ✅ Gemma (best available on Groq)
@@ -41,6 +50,7 @@ Return ONLY valid JSON.
       ],
       temperature: 0,
     });
+    
 
     console.log(response.choices[0].message.content);
     

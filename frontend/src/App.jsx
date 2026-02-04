@@ -100,9 +100,10 @@ function App() {
 
 
         </Route>
-                  <Route path="/chat" element={<ChatPage />} />
 
         </Route>
+                          <Route path="/chat" element={<ChatPage />} />
+
 
       </Routes>
     </>
